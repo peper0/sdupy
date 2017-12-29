@@ -62,7 +62,7 @@ def make_console(parent=None):
         "The variable 'foo' and the method 'print_process_id()' are available. Use the 'whos' command for information.")
     ipyConsole.executeCommand("%load_ext autoreload\n")
     ipyConsole.executeCommand("%autoreload 2\n")
-    ipyConsole.executeCommand("import public as p\n")
-    ipyConsole.executeCommand("import asyncio\n")
-    ipyConsole.executeCommand("from reactive import Var, reactive\n")
+    # ipyConsole.executeCommand("import public as p\n")
+    # ipyConsole.executeCommand("import asyncio\n")
+    # ipyConsole.executeCommand("from reactive import Var, reactive\n")
     return ipyConsole

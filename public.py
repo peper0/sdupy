@@ -1,11 +1,13 @@
-import numpy as np
 import asyncio
 
-from reactive import reactive, Var, rethrow, reactive_with_state, reactive
+import numpy as np
+
+from reactive import reactive
 
 
 def reactive_task(**kwargs):
     pass
+
 
 def test():
     print("dfyy")
@@ -25,24 +27,27 @@ class PlotBind:
         self.plot, = plot_brick.axes.plot(data)
         plot_brick.draw()
 
+
 def gen_random(n):
     for i in range(n):
         yield np.random.uniform(0, 1)
 
+
 @reactive
 def add(a, b):
-    return a+b
+    return a + b
 
 
 @reactive
 def myprint(a):
     print(a)
 
+
 @reactive
 async def gen(n, t=1):
     for i in range(n):
         await asyncio.sleep(t)
-        yield 1+i*i
+        yield 1 + i * i
 
 
 @reactive
@@ -50,6 +55,7 @@ async def clocked(interval, gen):
     for i in gen:
         await asyncio.sleep(interval)
         yield i
+
 
 @reactive
 async def append(gen):
@@ -66,6 +72,7 @@ async def prepend(gen):
         res.insert(0, i)
         yield res
 
+
 @reactive
 async def tail(array, count):
     a = np.array(array)
@@ -74,6 +81,7 @@ async def tail(array, count):
     async for i in gen:
         res.insert(0, i)
         yield res
+
 
 @reactive_with_state(task=None)
 def generated_var(self, gen):
@@ -98,7 +106,7 @@ async def plot(state, plot_brick, data):
         plot_brick.draw()
 
 
-@reactive_task(args_as_generator=('data', ), args_as_vars=('plot_brick'))
+@reactive_task(args_as_generator=('data',), args_as_vars=('plot_brick'))
 async def plot(generator, plot_brick):
     plot_line = None
     async for (data,) in generator:
@@ -153,11 +161,11 @@ async def plot3(plot_brick, data_gen):
             plot_brick.draw()
 
 
-
 @reactive_task()
 async def rec_telem(output, address):
     async for packet in receive(address):
         output.set(parse_tele(packet))
+
 
 @reactive_task(outputs=('t1', 't2'))
 async def rec_telem(output, address):

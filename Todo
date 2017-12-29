@@ -1,0 +1,113 @@
+TODO:
+- "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
+- plot manager - tabelka wykresów:
+  - który axis
+  - styl (kolor, linia, markery)
+  - data_table + kolumny x i y
+  - x: min, max, steps (downsampling ad-hoc)
+  - wyrażenie (np. data_table['kolumna'])
+  -
+
+
+Adaptery itp:
+- generator synchroniczny 0->1: np. generator liczb losowych, czytanie danych z pliku
+- generator asynchroniczny 0->1: pakiety po udp, czytak z RSa
+- uasynchroniczniacz 1->1: bierze generator sync, wypluwa async (z możliwością sleepowania pomiędzy)
+- packetizer 1->: czyta dane a generatora async tak długo aż skompletuje paczkę, po czym wypluwa całą paczkę
+- demuxer strumienia telemetrycznego 1->* : czyta dane, wypluwa otagowane, klienci używają filtrowanego tee (Var['t1']?)
+- merger *->1 : ciągnie dane z wielu generatorów, jest taktowany jednym z nich, wypluwa pakiet zagregowany z danymi ze wszystkich
+- muxer *-> : ciągnie kilka strumieni telemetrycznych
+- akumulator: bierze generator i wypluwa stan zawierający tablicę wszystkich elementów do początku
+- tee: dostaje jeden generator, umożliwia zrobienie dowolnej liczby wyjściowych
+- plotter: dostaje miejsce do plotowania i stan do wyplotowania, updatuje plota jak stan się zmienia, zwraca wartość pozwalającą wywalić ten wykres
+- downsample: dostaje tablicę (pandas lub array?), zmienne określające zakres i liczbę przedziałów; dla każdego przedziału
+    wyznacza wartość zagregowaną przechodnią (min, max, avg, sum, count); może używać piramid...?
+
+
+- każdy Var może być traktowany jak generator
+- opcja: wybrane argumenty jako Var'y
+- opcja: wyjście jest generatorem
+- opcja: wyjścia jako argumenty
+
+rodzaje:
+- reactive - input jako argumenty, output returnem; może być stanowe
+- reactive_task - jest uruchamiane w tle i cancelowane przy updacie; outputy dostaje jako parametry, nie tworzy zależności
+
+parametry:
+- state - funkcja dostaje przy każdym wywołaniu zmienną w której może przechowywać swój stan
+- args_as_vars - lista parametrów (nazwy lub indeksy), które mają być przekazywane jako Var'y (użyteczne głównie przy reactive_task
+- ungen_arg -
+
+
+- strumienie załatwiamy generatorami
+  - wiele wyjść: synchroniczne (np. tuple, namedtuple) i niezależne (para wyjście,wartość?)
+
+uwagi:
+- funkcja-generator nie wiadomo kiedy zareaguje na wejście, więc nie wiadomo czy wypluje jakąś zmianę w odpowiedzi na zmianę wejścia
+  - można to trochę olać i jak już wypluje, to najwyżej przeliczyć trochę za dużo... ale to łamie zasadę o spójności stanu
+- jeśli wejście i wyjście jest stanem, to ograniczony sens ma funkcja stanowa (np. generator). Na ogół stan wyjściowy będzie funkcją stanów wejściowych.
+- zamiana strumienia w stan ma sens; w drugą stronę niebardzo (i taka transormacja może być stanowa)
+
+- reaktywny generated_var (zmieniający się generator)
+- generator liczb losowych
+- agregator (generator->zmienna stanowa)
+- filtr grupujący
+- faktyczne nadawanie priorytetów variablom
+- updater powinien gdzieś zapisywać jaki numerek priorytetu jest obecnie odświeżany i nie pozwalać na dostęp do zmiennych o wyższym lub równym numerku (najlepiej czekać aż numerek się zwiększy)
+- rysowanie grafu zależności
+- integracja z jupyterem
+
+- menu i system komend do konsoli (wpisywanie komend do konsoli z menu)
+- ładowanie tablicy z pliku (na razie komenda)
+- widget wyświetlanie+filtrowanie
+- widget: wszystkie dostępne zmienne by typ
+- przemyśleć sygnalizowanie zmian i agregowanie zmian
+- wykres z przesuwaniem
+- marker czasu przemyśleć
+- łączenie bloczków przemyśleć
+- joiny tabel
+- skakanie do innej tabeli wg. wartości w kolumnie
+
+
+- liczba zmiennych (1/wiecej)
+- stanowość
+
+- 1 zmienna, bezstanowy - funkcja (ale może być opakowana w generator)
+- 1 zmienna, stanowy - generator
+- wiele zmiennych, bezstanowy - funkcja (po za szczególnymi przypadkami)
+- wiele zmiennych, stanowy - funkcja stanowa
+
+- każda zmienna może być brana zarówno jako generator jak i jako ostatnia wartość
+- karmiona też
+- co jak generator słucha kilku ziomów?
+- zmienne mają flagę mówiącą czy tylko ostatni stan ma znaczenie, czy pośrednie też (strumień)
+- łapanie wyjątków w każdej zmiennej osobno
+
+=== Cele ===
+- żeby to co naklikamy dało się zapisać w postaci skryptu, który robi to samo z danymi (osobno jeszcze kwestia zapisu stanu gui)
+- żeby popularne rzeczy dało się wyklikać, ale zobaczyć od razu jak to robić z konsoli
+- mieć konsolę z podpowiadaniem, w której się da robić to samo co klikając
+
+
+=== Pomysły ===
+
+- zapisujemy tylko loga z konsoli użytkownika oraz stan bloczków i aplikacji (np. ułożenie bloczków itp)
+- każda komenda w menu wpisuje komendę do konsoli użytkownika, ale może wołać trochę kodu pod maską, żeby ustalić jaką dokładnie komendę wpisać (np. wyświetlać okienko z pytaniem o nazwę pliku)
+- istnieją komendy tworzące bloczki poprzez api aplikacji
+- bloczki mogą gadać z zewnętrzem tylko poprzez konsolkę użytkownika (tzn. ostatecznie powinny wrzucać tam jakieś komendy), a pozostałe akcje na nich powinny mieć odzwierciedlenie w ich serializowanym stanie
+- ? zmienne przez które gadają bloczki są obsługiwane przez api, gdzie jest też możliwość zapisywania się na ich zmiany (całościowe lub bardziej szczegółowo opisane, np. dodanie wiersza danych itp).
+- ? bloczki zapisują się na zmiany tych zmiennych i deklarują jakie zmienne chcą modyfikować
+- ? każde zadziałanie bloczka wskutek zmiany jego kontrolek (stanu) lub danych wejściowych jest widoczny w konsoli
+- komendy "set_var", "{insert/remove/append}_rows"
+
+== Widget do filtrowania i wyświetlania ==
+- wybór kolumn do wyświetlania (może prawoklik na kolumnę i możliwość przeciągania?)
+- filtrowanie bazowe: warunek w formacie DataFrame.query, który odrzuca wiersze niepasujące
+- filtrowanie miękkie: warunek, który wyszarza/folduje wiersze niepasujące
+- sortowanie (klik w kolumnę?)
+- pola "wtórne", czyli operacja na polach
+- wyszukiwanie
+- formatowanie (np. podawanie format stringa dla wybranych kolumn)
+- możliwość edycji?
+- groupby?
+- downsampling? po wierszach wg kolejności sortowania? albo wg któregoś pola po dzieleniu i zaokrągleniu?
