@@ -170,26 +170,43 @@ class AsyncReactor(ReactorBase):
         return self._result_var
 
 
+unfinished_iterators = set()
+
+
 class YieldingReactor(ReactorBase):
     def __init__(self, binding: Binding):
         super().__init__(binding)
         self._iterator = None  # type: Iterator
 
     def cleanup(self):
+        import os
+        os.write(1, "cleanup{}{}\n".format(self, self._iterator).encode())
         if self._iterator:
             with suppress(StopIteration):
+                os.write(1, "nexing{}{}\n".format(self._iterator.gi_running, self._iterator.gi_frame).encode())
                 next(self._iterator)
+                os.write(1, b"ehe\n")
                 raise Exception("two yields in function %s")
+            unfinished_iterators.remove(self._iterator)
+            os.write(1, b"fin\n")
             self._iterator = None
+        os.write(1, b"cleanup fin\n")
 
     def update(self):
+        import os
+        os.write(1, "update {} {}\n".format(self, self._iterator).encode())
         self.cleanup()
         self._iterator = iter(self._binding())
+        unfinished_iterators.add(self._iterator)
         self._result_var.set(next(self._iterator))
+        import os
+        os.write(1, "aaaanexing{} {}\n".format(self, self._iterator).encode())
 
-    async def build_result(self):
-        await self.update()
+    def build_result(self):
+        self.update()
+        import os
         self._result_var.on_dispose = ensure_coro_func(self.cleanup)
+        os.write(1, "new {} {}\n".format(self, self._iterator).encode())
         return self._result_var
 
 
@@ -257,18 +274,6 @@ async def cancel_and_wait(task):
         await task
     except asyncio.CancelledError:
         pass
-
-
-def reactive_task():
-    def wrapper(f):
-        async def wrapped_f(*args, **kwargs):
-            task = asyncio.ensure_future(f(*args, **kwargs))
-            yield task
-            cancel_and_wait(task)
-
-        return reactive(yield_for_return=True)(wrapped_f)
-
-    return wrapper
 
 
 def unroll_gen(gen_arg=0):

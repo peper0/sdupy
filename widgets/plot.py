@@ -8,7 +8,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from .common.register import register_widget
 
 
-@register_widget("plot")
+@register_widget("matplotlib plot")
 class Plot(QWidget):
     def __init__(self, parent):
         super().__init__(parent)

@@ -1,5 +1,15 @@
 TODO:
+- współpraca z jupyterem (startujemy z jupytera, ładuje se konfigurację, można obtainować kontrolki, które przywracają sobie parametry z konfiguracji)
+- obtain_axes
+- imshow(name, Var)
+- suwak do wyboru ramki
+- ładowarka ramek do wyświetlenia imshowem
+
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
+  - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
+  - dużo telemetrii wczytanych z plików (dicty?)
+  - ceny btc na różnych giełdach -> dużo takich samych tabel
+  -
 - plot manager - tabelka wykresów:
   - który axis
   - styl (kolor, linia, markery)

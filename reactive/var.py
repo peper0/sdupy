@@ -1,4 +1,5 @@
 import asyncio
+import os
 from contextlib import suppress
 from typing import Any, Awaitable, NamedTuple
 
@@ -13,7 +14,7 @@ class QueueItem(NamedTuple):
 
 
 def rethrow(f):
-    print("finished: %s" % f)
+    # print("finished: %s" % f)
     if f.cancelled():
         print("task was canceled")
         return
@@ -39,7 +40,6 @@ class Refresher:
 
     def add_coroutine(self, hash, coro):
         t = QueueItem(1, hash, coro)
-        print("add ", t)
         self.queue.put_nowait(t)
         self.maybe_start_task()
 
@@ -48,9 +48,7 @@ class Refresher:
 
         with suppress(asyncio.QueueEmpty):  # it's ok - if the queue is empty we just exit
             while True:
-                print("waiting")
                 update = update_next if update_next else self.queue.get_nowait()
-                print("upd: ", update)
                 try:
                     update_next = self.queue.get_nowait()
                     if update_next.id == update.id:  # skip update if is same as next
@@ -58,7 +56,6 @@ class Refresher:
                 except asyncio.QueueEmpty:
                     update_next = None
 
-                print("calling")
                 await update.awaitable
 
 
@@ -79,14 +76,16 @@ def get_default_refresher():
 
 
 class Var:
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.data = data
         self.coro_functions = []
         self.on_dispose = None
         self.disposed = False
 
     def __del__(self):
+        print("deleting", self, self.disposed, self.on_dispose)
         if not self.disposed and self.on_dispose:
+            os.write(1, b"will dispose\n")
             get_default_refresher().add_coroutine(self.on_dispose, self.on_dispose())
             # assert self.disposed, "Var.dispose was not called before destroying"
 

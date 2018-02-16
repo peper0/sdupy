@@ -11,35 +11,30 @@ import sys
 
 from quamash import QEventLoop, QApplication
 
-app = QApplication(sys.argv)
-
-loop = QEventLoop(app)
-asyncio.set_event_loop(loop)  # NEW must set the event loop
-
-window = MainWindow()
-window.show()
+default_main_window = None  # type: MainWindow
 
 
-# con = widgets.make_console(window)
-# window.addDockWidget(Qt.RightDockWidgetArea, con)
+def init_loop():
+    app = QApplication(sys.argv)
+
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)  # NEW must set the event loop
 
 
-async def async_main():
-    # window.add_plot()
-    for i in range(100):
-        await asyncio.sleep(1)
-        # con.setWindowTitle("con %d" % i)
+def run_loop():
+    loop = asyncio.get_event_loop()
+    try:
+        with loop:  ## context manager calls .close() when loop completes, and releases all resources
+            loop.run_forever()
+            #    loop.run_until_complete(async_main())
+    finally:
+        pass
+        # main_task.cancel()
 
-        # pb = public.PlotBind()
-        # pb.update(window.plot, [1, 2, 3])
 
-
-main_task = asyncio.ensure_future(async_main())
-
-try:
-    with loop:  ## context manager calls .close() when loop completes, and releases all resources
-        loop.run_forever()
-        #    loop.run_until_complete(async_main())
-finally:
-    pass
-    # main_task.cancel()
+def start(state_name):
+    global default_main_window
+    window = MainWindow(state_name=state_name)
+    default_main_window = window
+    window.show()
+    return window

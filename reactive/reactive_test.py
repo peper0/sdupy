@@ -1,4 +1,5 @@
 import asyncio
+import gc
 
 import asynctest
 
@@ -99,7 +100,7 @@ inside = 0
 
 
 @reactive_finalizable()
-async def sum_with_yield(a, b):
+def sum_with_yield(a, b):
     global inside
     inside += 1
     # do work and return the result
@@ -120,8 +121,13 @@ class ReactiveWithYield(asynctest.TestCase):
         await wait_for_var(res)
         self.assertEqual(res.data, 3)
         self.assertEqual(inside, 1)
-        await res.dispose()
+        # await res.dispose()
+        del b
+        gc.collect()
+        print(gc.get_referrers(res))
         del res
+        gc.collect()
+        # await asyncio.sleep(1)
         self.assertEqual(inside, 0)
         print("finished)")
 
@@ -135,7 +141,7 @@ async def async_sum_with_yield(a, b):
     inside -= 1
 
 
-class ReactiveWithYield(asynctest.TestCase):
+class AsyncReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = Var(5)
         res = await async_sum_with_yield(2, b=b)
@@ -143,14 +149,12 @@ class ReactiveWithYield(asynctest.TestCase):
         self.assertEqual(res.data, 7)
         self.assertEqual(inside, 1)
         b.set(1)
-        print("w1")
         await wait_for_var(res)
         self.assertEqual(res.data, 3)
         self.assertEqual(inside, 1)
         await res.dispose()
         del res
         self.assertEqual(inside, 0)
-        print("finished)")
 
 
 async def appender(queue: asyncio.Queue):

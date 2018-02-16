@@ -2,6 +2,9 @@
   <dictionary name="peper">
     <words>
       <w>awaitable</w>
+      <w>coro</w>
+      <w>rewrap</w>
+      <w>rewrapped</w>
     </words>
   </dictionary>
 </component>
