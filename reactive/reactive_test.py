@@ -4,7 +4,7 @@ import gc
 import asynctest
 
 from .reactive import reactive, reactive_finalizable, var_from_gen
-from .var import Var, wait_for_var
+from .var import VarBase, wait_for_var
 
 
 @reactive()
@@ -23,14 +23,14 @@ class SimpleReactive(asynctest.TestCase):
         a = Var(2)
         res = my_sum(a, 5)
         await wait_for_var(res)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_val_keyword(self):
         a = Var(2)
         res = my_sum(a=a, b=5)
         await wait_for_var(res)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_var(self):
@@ -38,7 +38,7 @@ class SimpleReactive(asynctest.TestCase):
         b = Var(5)
         res = my_sum(a=a, b=b)
         await wait_for_var(res)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_changes(self):
@@ -68,20 +68,20 @@ class SimpleReactiveAsync(asynctest.TestCase):
     async def test_var_val_positional(self):
         a = Var(2)
         res = await async_sum(a, 5)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_val_keyword(self):
         a = Var(2)
         res = await async_sum(a=a, b=5)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_var(self):
         a = Var(2)
         b = Var(5)
         res = await async_sum(a=a, b=b)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
 
     async def test_var_changes(self):
@@ -113,7 +113,7 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = Var(5)
         res = sum_with_yield(2, b=b)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
         self.assertEqual(inside, 1)
         b.set(1)
@@ -145,7 +145,7 @@ class AsyncReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = Var(5)
         res = await async_sum_with_yield(2, b=b)
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
         self.assertEqual(inside, 1)
         b.set(1)
@@ -178,7 +178,7 @@ class Task(asynctest.TestCase):
         queue = asyncio.Queue()
         res = await var_from_gen(appender(queue))
 
-        self.assertIsInstance(res, Var)
+        self.assertIsInstance(res, VarBase)
         await asyncio.sleep(0)
         self.assertEqual(res.data, [])
         await queue.put(5)

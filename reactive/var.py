@@ -1,8 +1,9 @@
 import asyncio
 import os
 import weakref
+from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, Awaitable, NamedTuple, List, Callable, Coroutine, Iterable
+from typing import Any, Awaitable, Callable, Coroutine, NamedTuple
 
 CoroutineFunction = Callable[[], Coroutine]
 
@@ -86,42 +87,28 @@ def get_default_refresher():
     return refresher
 
 
-class Var:
-    def __init__(self, data=None):
-        self.data = data
+class VarBase:
+    def __init__(self):
         self._observers = weakref.WeakSet()  # Iterable[CoroutineFunction]
-        #self._observers = set()  # Iterable[CoroutineFunction]
         self.on_dispose = None
         self.disposed = False
         self._kept_references = []
 
     def __del__(self):
-        print("deleting", self, self.disposed, self.on_dispose)
         if not self.disposed and self.on_dispose:
             os.write(1, b"will dispose\n")
             get_default_refresher().add_coroutine(self.on_dispose, self.on_dispose())
             # assert self.disposed, "Var.dispose was not called before destroying"
 
-    def set(self, new_data):
-        self.data = new_data
-        for corof in self._observers:   # type: CoroutineFunction
+    def notify_observers(self):
+        for corof in self._observers:  # type: CoroutineFunction
             get_default_refresher().add_coroutine(corof, corof())
 
     async def dispose(self):
         if not self.disposed:
-            print("disposing?")
             if self.on_dispose:
-                print("disposing")
                 await self.on_dispose()
             self.disposed = True
-            # def __getattr__(self, item):
-            #    print("getattr %s"% item)
-            # def __getattribute__(self, item):
-            #    print("getattribute %s"% item)
-
-            # @reactive
-            # def __add__(x, y):
-            #    return x + y
 
     def add_observer(self, observer: CoroutineFunction):
         myprint("added observer", observer, 'to', self)
@@ -133,3 +120,40 @@ class Var:
         """
         self._kept_references.append(o)
 
+    @property
+    def data(self):
+        return self.get()
+
+    @data.setter
+    def data(self, value):
+        self.set(value)
+
+    @abstractmethod
+    def set(self, value):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get(self):
+        raise NotImplementedError()
+
+
+class Var(VarBase):
+    def __init__(self, data=None):
+        super().__init__()
+        self._data = data
+
+    def set(self, value):
+        self._data = value
+        self.notify_observers()
+
+    def get(self):
+        return self._data
+
+# def __getattr__(self, item):
+#    print("getattr %s"% item)
+# def __getattribute__(self, item):
+#    print("getattribute %s"% item)
+
+# @reactive
+# def __add__(x, y):
+#    return x + y

@@ -1,2 +1,2 @@
 from .reactive import reactive
-from .var import Var, wait_for_var
+from .var import VarBase, wait_for_var

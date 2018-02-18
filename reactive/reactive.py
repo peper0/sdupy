@@ -3,24 +3,24 @@ import inspect
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Union, Set
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Set, Union
 
-from .var import Var, myprint
+from .var import Var, VarBase
 
 
 def args_need_reaction(args: tuple, kwargs: dict):
-    return any((isinstance(arg, Var) for arg in args + tuple(kwargs.values())))
+    return any((isinstance(arg, VarBase) for arg in args + tuple(kwargs.values())))
 
 
 def rewrap_args(args, kwargs: dict, args_as_vars=set()):
     def as_value(arg):
-        if isinstance(arg, Var):
+        if isinstance(arg, VarBase):
             return arg.data
         else:
             return arg
 
     def as_var(arg):
-        if isinstance(arg, Var):
+        if isinstance(arg, VarBase):
             return arg
         else:
             return Var(arg)
@@ -36,8 +36,8 @@ def rewrap_args(args, kwargs: dict, args_as_vars=set()):
     return args_rewrapped, kwargs_rewrapped
 
 
-def maybe_observe(arg: Union[Var, Any], update):
-    if isinstance(arg, Var):
+def maybe_observe(arg: Union[VarBase, Any], update):
+    if isinstance(arg, VarBase):
         return arg.add_observer(update)
 
 
@@ -145,11 +145,10 @@ class Binding:
 
 
 class ReactorBase:
-    def __init__(self, var: Var, binding: Binding):
+    def __init__(self, var: VarBase, binding: Binding):
         self._binding = binding
         self._result_var_weak = weakref.ref(var)
         update = ensure_coro_func(self.update)
-        import sys
         #myprint("refcnt1 ", sys.getrefcount(update))
         var.keep_reference(update)  # keep reference as long as "var" exists
         #myprint("refcnt2 ", sys.getrefcount(update))
