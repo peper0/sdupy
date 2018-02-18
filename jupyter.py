@@ -2,7 +2,7 @@ import asyncio
 
 from ipykernel.eventloops import register_integration
 
-from studioapp import init_loop
+from .studioapp import init_loop
 
 
 @register_integration('studio')

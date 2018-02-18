@@ -3,8 +3,8 @@ import gc
 
 import asynctest
 
-from reactive.reactive import reactive, reactive_finalizable, var_from_gen
-from reactive.var import Var, wait_for_var
+from .reactive import reactive, reactive_finalizable, var_from_gen
+from .var import Var, wait_for_var
 
 
 @reactive()

@@ -2,7 +2,7 @@ import asyncio
 import sip
 
 # import public
-from main_window import MainWindow
+from .main_window import MainWindow
 
 sip.setapi("QString", 2)
 sip.setapi("QVariant", 2)

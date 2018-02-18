@@ -6,8 +6,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
-import widgets
-from widgets.common.register import FactoryDesc
+from . import widgets
+from .widgets.common.register import FactoryDesc
 
 
 class WidgetInstance(NamedTuple):

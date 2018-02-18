@@ -4,7 +4,7 @@ from abc import abstractmethod
 from contextlib import suppress
 from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Union
 
-from reactive.var import Var
+from .var import Var, myprint
 
 
 def args_need_reaction(args: tuple, kwargs: dict):

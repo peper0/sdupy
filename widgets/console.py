@@ -1,6 +1,6 @@
 import sip
 
-from widgets.common.register import register_factory
+from .common.register import register_factory
 
 sip.setapi("QString", 2)
 sip.setapi("QVariant", 2)

@@ -6,8 +6,8 @@ import pandas as pd
 from PyQt5.QtCore import QAbstractTableModel, Qt
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
-from reactive import reactive
-from reactive.reactive import var_from_gen
+from ..reactive import reactive
+from ..reactive.reactive import var_from_gen
 from .common.register import register_factory, register_widget
 
 

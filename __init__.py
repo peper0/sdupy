@@ -1,3 +1,3 @@
-from studioapp import start
+from .studioapp import start
 
 start
