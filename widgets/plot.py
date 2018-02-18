@@ -68,6 +68,19 @@ class Axes(QWidget):
     def resizeEvent(self, a0: QtGui.QResizeEvent):
         self.figure.tight_layout()
 
+    def dump_state(self):
+        return dict(
+            xlim=self.axes.get_xlim(),
+            ylim=self.axes.get_ylim()
+        )
+
+    def load_state(self, state: dict):
+        if 'xlim' in state:
+            self.axes.set_xlim(state['xlim'])
+        if 'ylim' in state:
+            self.axes.set_ylim(state['ylim'])
+
+
 
 
 @register_widget("matplotlib plot")
