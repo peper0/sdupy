@@ -1,7 +1,14 @@
 import asyncio
 import os
+import weakref
 from contextlib import suppress
-from typing import Any, Awaitable, NamedTuple
+from typing import Any, Awaitable, NamedTuple, List, Callable, Coroutine, Iterable
+
+CoroutineFunction = Callable[[], Coroutine]
+
+
+def myprint(*args):
+    os.write(1, (' '.join(map(str, args))+'\n').encode())
 
 
 class QueueItem(NamedTuple):
@@ -21,6 +28,7 @@ def rethrow(f):
     e = f.exception()
     if e:
         print("err: ", e.__class__, e)
+        myprint("ERROR==================: ", e.__class__, e)
         if isinstance(e, asyncio.CancelledError):
             print("task was canceled 2")
         else:
@@ -56,7 +64,10 @@ class Refresher:
                 except asyncio.QueueEmpty:
                     update_next = None
 
-                await update.awaitable
+                try:
+                    await update.awaitable
+                except Exception as e:
+                    myprint("ERROR in some handler ==================: ", e.__class__, e)
 
 
 refresher = None
@@ -78,9 +89,11 @@ def get_default_refresher():
 class Var:
     def __init__(self, data=None):
         self.data = data
-        self.coro_functions = []
+        self._observers = weakref.WeakSet()  # Iterable[CoroutineFunction]
+        #self._observers = set()  # Iterable[CoroutineFunction]
         self.on_dispose = None
         self.disposed = False
+        self._kept_references = []
 
     def __del__(self):
         print("deleting", self, self.disposed, self.on_dispose)
@@ -91,7 +104,7 @@ class Var:
 
     def set(self, new_data):
         self.data = new_data
-        for corof in self.coro_functions:
+        for corof in self._observers:   # type: CoroutineFunction
             get_default_refresher().add_coroutine(corof, corof())
 
     async def dispose(self):
@@ -109,3 +122,14 @@ class Var:
             # @reactive
             # def __add__(x, y):
             #    return x + y
+
+    def add_observer(self, observer: CoroutineFunction):
+        myprint("added observer", observer, 'to', self)
+        self._observers.add(observer)
+
+    def keep_reference(self, o):
+        """
+        Keeps a reference to `o` for own Var instance lifetime.
+        """
+        self._kept_references.append(o)
+

@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import weakref
 from abc import abstractmethod
 from contextlib import suppress
 from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Union
@@ -37,7 +38,7 @@ def rewrap_args(args, kwargs: dict, args_as_vars=set()):
 
 def maybe_observe(arg: Union[Var, Any], update):
     if isinstance(arg, Var):
-        arg.coro_functions.append(ensure_coro_func(update))
+        return arg.add_observer(update)
 
 
 def observe_many(args, kwargs, update):
@@ -73,7 +74,9 @@ def reactive(args_as_vars=set()):
         def wrapped(*args, **kwargs):
             if args_need_reaction(args, kwargs):
                 binding = Binding(f, args_as_vars, args, kwargs)
-                return factory(binding).build_result()
+                var = Var()
+                factory(var, binding).build_result()
+                return var
             else:
                 return f(*args, **kwargs)
 
@@ -93,11 +96,13 @@ def reactive_finalizable(args_as_vars=set()):
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(f)))
 
         def wrapped(*args, **kwargs):
-            if args_need_reaction(args, kwargs):
-                binding = Binding(f, args_as_vars, args, kwargs)
-                return factory(binding).build_result()
-            else:
-                return f(*args, **kwargs)
+#            if args_need_reaction(args, kwargs):
+            binding = Binding(f, args_as_vars, args, kwargs)
+            var = Var()
+            factory(var, binding).build_result()
+            return var
+#            else:
+#                return f(*args, **kwargs)
 
         return wrapped
 
@@ -111,7 +116,9 @@ def reactive_task(args_as_vars=set()):
 
         def wrapped(*args, **kwargs):
             binding = Binding(f, args_as_vars, args, kwargs)
-            return TaskReactor(binding).build_result()
+            var = Var()
+            TaskReactor(var, binding).build_result()
+            return var
 
         return wrapped
 
@@ -138,10 +145,17 @@ class Binding:
 
 
 class ReactorBase:
-    def __init__(self, binding: Binding):
+    def __init__(self, var: Var, binding: Binding):
         self._binding = binding
-        self._result_var = Var(None)
-        observe_many(self._binding.args, self._binding.kwargs, self.update)
+        self._result_var_weak = weakref.ref(var)
+        update = ensure_coro_func(self.update)
+        import sys
+        #myprint("refcnt1 ", sys.getrefcount(update))
+        var.keep_reference(update)  # keep reference as long as "var" exists
+        #myprint("refcnt2 ", sys.getrefcount(update))
+        observe_many(self._binding.args, self._binding.kwargs, update)
+        #myprint("refcnt3 ", sys.getrefcount(update))
+        #del update
 
     @abstractmethod
     def update(self):
@@ -154,28 +168,27 @@ class ReactorBase:
 
 class Reactor(ReactorBase):
     def update(self):
-        self._result_var.set(self._binding())
+        self._result_var_weak().set(self._binding())
 
     def build_result(self):
         self.update()
-        return self._result_var
+        return self._result_var_weak()
 
 
 class AsyncReactor(ReactorBase):
     async def update(self):
-        self._result_var.set(await self._binding())
+        self._result_var_weak().set(await self._binding())
 
     async def build_result(self):
         await self.update()
-        return self._result_var
 
 
 unfinished_iterators = set()
 
 
 class YieldingReactor(ReactorBase):
-    def __init__(self, binding: Binding):
-        super().__init__(binding)
+    def __init__(self, var, binding: Binding):
+        super().__init__(var, binding)
         self._iterator = None  # type: Iterator
 
     def cleanup(self):
@@ -198,21 +211,20 @@ class YieldingReactor(ReactorBase):
         self.cleanup()
         self._iterator = iter(self._binding())
         unfinished_iterators.add(self._iterator)
-        self._result_var.set(next(self._iterator))
+        self._result_var_weak().set(next(self._iterator))
         import os
         os.write(1, "aaaanexing{} {}\n".format(self, self._iterator).encode())
 
     def build_result(self):
         self.update()
         import os
-        self._result_var.on_dispose = ensure_coro_func(self.cleanup)
+        self._result_var_weak().on_dispose = ensure_coro_func(self.cleanup)
         os.write(1, "new {} {}\n".format(self, self._iterator).encode())
-        return self._result_var
 
 
 class AsyncYieldingReactor(ReactorBase):
-    def __init__(self, binding: Binding):
-        super().__init__(binding)
+    def __init__(self, var, binding: Binding):
+        super().__init__(var, binding)
         self._iterator = None  # type: AsyncIterator
 
     async def cleanup(self):
@@ -225,17 +237,16 @@ class AsyncYieldingReactor(ReactorBase):
     async def update(self):
         await self.cleanup()
         self._iterator = self._binding().__aiter__()
-        self._result_var.set(await self._iterator.__anext__())
+        self._result_var_weak().set(await self._iterator.__anext__())
 
     async def build_result(self):
         await self.update()
-        self._result_var.on_dispose = self.cleanup
-        return self._result_var
+        self._result_var_weak().on_dispose = self.cleanup
 
 
 class TaskReactor(ReactorBase):
-    def __init__(self, binding: Binding):
-        super().__init__(binding)
+    def __init__(self, var, binding: Binding):
+        super().__init__(var, binding)
         self._task = None  # type: asyncio.Task
 
     async def cleanup(self):
@@ -245,7 +256,7 @@ class TaskReactor(ReactorBase):
 
     async def _task_loop(self):
         async for res in self._binding():
-            self._result_var.set(res)
+            self._result_var_weak().set(res)
 
     async def update(self):
         await self.cleanup()
@@ -253,8 +264,7 @@ class TaskReactor(ReactorBase):
 
     async def build_result(self):
         await self.update()
-        self._result_var.on_dispose = self.cleanup
-        return self._result_var
+        self._result_var_weak().on_dispose = self.cleanup
 
 
 def with_state(state=None):

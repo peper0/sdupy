@@ -1,9 +1,12 @@
 TODO:
-- współpraca z jupyterem (startujemy z jupytera, ładuje se konfigurację, można obtainować kontrolki, które przywracają sobie parametry z konfiguracji)
-- obtain_axes
+- wbudowany logger - przyda się do oglądania updejtów zmiennych
+- show_image -> imshow
+- persistent do imshow (i trzymamy wtedy jeden updater per okienko)
+- obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - imshow(name, Var)
-- suwak do wyboru ramki
+- suwak do wyboru ramki (najlepiej ze spinboxem), combo
 - ładowarka ramek do wyświetlenia imshowem
+- ploty: scrollowanie, przesuwanie, tight_layout, obszar roboczy zawsze max
 
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
   - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
