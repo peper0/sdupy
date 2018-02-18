@@ -1,8 +1,8 @@
 import os
 
 import cv2
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from . import studioapp
 from .reactive.reactive import reactive_finalizable
