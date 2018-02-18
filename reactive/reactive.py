@@ -3,7 +3,7 @@ import inspect
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Union
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Union, Set
 
 from .var import Var, myprint
 
@@ -61,7 +61,7 @@ def ensure_coro_func(f):
 CoroFunction = Callable[[], Coroutine]
 
 
-def reactive(args_as_vars=set()):
+def reactive(args_as_vars: Set[str]=set()):
     def wrapper(f):
 
         if asyncio.iscoroutinefunction(f):
@@ -73,7 +73,7 @@ def reactive(args_as_vars=set()):
 
         def wrapped(*args, **kwargs):
             if args_need_reaction(args, kwargs):
-                binding = Binding(f, args_as_vars, args, kwargs)
+                binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
                 var = Var()
                 factory(var, binding).build_result()
                 return var
@@ -85,7 +85,7 @@ def reactive(args_as_vars=set()):
     return wrapper
 
 
-def reactive_finalizable(args_as_vars=set()):
+def reactive_finalizable(args_as_vars: Set[str]=set()):
     def wrapper(f):
 
         if inspect.isasyncgenfunction(f):
@@ -97,7 +97,7 @@ def reactive_finalizable(args_as_vars=set()):
 
         def wrapped(*args, **kwargs):
 #            if args_need_reaction(args, kwargs):
-            binding = Binding(f, args_as_vars, args, kwargs)
+            binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
             var = Var()
             factory(var, binding).build_result()
             return var
@@ -172,7 +172,6 @@ class Reactor(ReactorBase):
 
     def build_result(self):
         self.update()
-        return self._result_var_weak()
 
 
 class AsyncReactor(ReactorBase):
