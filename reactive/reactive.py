@@ -5,7 +5,8 @@ from abc import abstractmethod
 from contextlib import suppress
 from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Set, Union, overload
 
-from .var import Var, VarBase
+from sdupy.reactive.var import RVal, ensure_coro_func
+from .var import VarBase
 
 
 def args_need_reaction(args: tuple, kwargs: dict):
@@ -23,7 +24,7 @@ def rewrap_args(args, kwargs: dict, args_as_vars=set()):
         if isinstance(arg, VarBase):
             return arg
         else:
-            return Var(arg)
+            return RVal(arg)
 
     def rewrap(key: Union[str, int], arg):
         if key in args_as_vars:
@@ -46,16 +47,6 @@ def observe_many(args, kwargs, update):
         maybe_observe(arg, update)
     for k, arg, in kwargs.items():
         maybe_observe(arg, update)
-
-
-def ensure_coro_func(f):
-    if asyncio.iscoroutinefunction(f):
-        return f
-    elif hasattr(f, '__call__'):
-        async def async_f(*args, **kwargs):
-            return f(*args, **kwargs)
-
-        return async_f
 
 
 CoroFunction = Callable[[], Coroutine]
@@ -88,7 +79,7 @@ def reactive(args_as_vars=set()):
         def wrapped(*args, **kwargs):
             if args_need_reaction(args, kwargs):
                 binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
-                var = Var()
+                var = RVal()
                 factory(var, binding).build_result()
                 return var
             else:
@@ -110,13 +101,10 @@ def reactive_finalizable(args_as_vars: Set[str]=set()):
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(f)))
 
         def wrapped(*args, **kwargs):
-#            if args_need_reaction(args, kwargs):
             binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
-            var = Var()
+            var = RVal()
             factory(var, binding).build_result()
             return var
-#            else:
-#                return f(*args, **kwargs)
 
         return wrapped
 
@@ -130,7 +118,7 @@ def reactive_task(args_as_vars=set()):
 
         def wrapped(*args, **kwargs):
             binding = Binding(f, args_as_vars, args, kwargs)
-            var = Var()
+            var = RVal()
             TaskReactor(var, binding).build_result()
             return var
 
@@ -162,13 +150,9 @@ class ReactorBase:
     def __init__(self, var: VarBase, binding: Binding):
         self._binding = binding
         self._result_var_weak = weakref.ref(var)
-        update = ensure_coro_func(self.update)
-        #myprint("refcnt1 ", sys.getrefcount(update))
+        update = self.update
         var.keep_reference(update)  # keep reference as long as "var" exists
-        #myprint("refcnt2 ", sys.getrefcount(update))
         observe_many(self._binding.args, self._binding.kwargs, update)
-        #myprint("refcnt3 ", sys.getrefcount(update))
-        #del update
 
     @abstractmethod
     def update(self):
@@ -181,7 +165,7 @@ class ReactorBase:
 
 class Reactor(ReactorBase):
     def update(self):
-        self._result_var_weak().set(self._binding())
+        self._result_var_weak().provide(self._binding())
 
     def build_result(self):
         self.update()
@@ -189,7 +173,7 @@ class Reactor(ReactorBase):
 
 class AsyncReactor(ReactorBase):
     async def update(self):
-        self._result_var_weak().set(await self._binding())
+        self._result_var_weak().provide(await self._binding())
 
     async def build_result(self):
         await self.update()
@@ -223,7 +207,7 @@ class YieldingReactor(ReactorBase):
         self.cleanup()
         self._iterator = iter(self._binding())
         unfinished_iterators.add(self._iterator)
-        self._result_var_weak().set(next(self._iterator))
+        self._result_var_weak().provide(next(self._iterator))
         import os
         os.write(1, "aaaanexing{} {}\n".format(self, self._iterator).encode())
 
@@ -249,7 +233,7 @@ class AsyncYieldingReactor(ReactorBase):
     async def update(self):
         await self.cleanup()
         self._iterator = self._binding().__aiter__()
-        self._result_var_weak().set(await self._iterator.__anext__())
+        self._result_var_weak().provide(await self._iterator.__anext__())
 
     async def build_result(self):
         await self.update()
@@ -268,7 +252,7 @@ class TaskReactor(ReactorBase):
 
     async def _task_loop(self):
         async for res in self._binding():
-            self._result_var_weak().set(res)
+            self._result_var_weak().provide(res)
 
     async def update(self):
         await self.cleanup()

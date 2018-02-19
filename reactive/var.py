@@ -3,9 +3,10 @@ import os
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, Awaitable, Callable, Coroutine, NamedTuple
+from typing import Any, Awaitable, Callable, Coroutine, NamedTuple, Union
 
 CoroutineFunction = Callable[[], Coroutine]
+Observer = Union[Callable[[], None], CoroutineFunction]
 
 
 def myprint(*args):
@@ -87,9 +88,10 @@ def get_default_refresher():
     return refresher
 
 
+# rename to "Observable"?
 class VarBase:
     def __init__(self):
-        self._observers = weakref.WeakSet()  # Iterable[CoroutineFunction]
+        self._observers = weakref.WeakSet()  # Iterable[Observer]
         self.on_dispose = None
         self.disposed = False
         self._kept_references = []
@@ -101,8 +103,8 @@ class VarBase:
             # assert self.disposed, "Var.dispose was not called before destroying"
 
     def notify_observers(self):
-        for corof in self._observers:  # type: CoroutineFunction
-            get_default_refresher().add_coroutine(corof, corof())
+        for corof in self._observers:  # type: Observer
+            get_default_refresher().add_coroutine(corof, ensure_coro_func(corof)())
 
     async def dispose(self):
         if not self.disposed:
@@ -110,7 +112,7 @@ class VarBase:
                 await self.on_dispose()
             self.disposed = True
 
-    def add_observer(self, observer: CoroutineFunction):
+    def add_observer(self, observer: Observer):
         myprint("added observer", observer, 'to', self)
         self._observers.add(observer)
 
@@ -149,6 +151,42 @@ class Var(VarBase):
     def get(self):
         return self._data
 
+
+class RVal(VarBase):
+    def __init__(self):
+        super().__init__()
+        self._data = None  # type: Union[VarBase, Any]
+        self._target_var = None
+        self._updater = None
+
+    def _act_as_proxy(self):
+        return isinstance(self._data_or_target, VarBase)
+
+    def provide(self, data_or_target):
+        if isinstance(data_or_target, VarBase):
+            self._target_var = data_or_target
+            self._data = None
+            self._updater = self.notify_observers
+            self._target_var.add_observer(self._updater)
+        else:
+            self._target_var = None
+            self._data = data_or_target
+            self._updater = None
+        self.notify_observers()
+
+    def get(self):
+        if self._target_var:
+            return self._target_var.get()
+        else:
+            return self._data
+
+    def set(self, value):
+        if self._target_var:
+            return self._target_var.set(value)
+        else:
+            raise Exception("read-only variable")
+        self._data = value
+        self.notify_observers()
 # def __getattr__(self, item):
 #    print("getattr %s"% item)
 # def __getattribute__(self, item):
@@ -157,3 +195,11 @@ class Var(VarBase):
 # @reactive
 # def __add__(x, y):
 #    return x + y
+def ensure_coro_func(f):
+    if asyncio.iscoroutinefunction(f):
+        return f
+    elif hasattr(f, '__call__'):
+        async def async_f(*args, **kwargs):
+            return f(*args, **kwargs)
+
+        return async_f

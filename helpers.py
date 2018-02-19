@@ -54,7 +54,7 @@ def display_variable(widget_name: str, var_name: str, var: VarBase, editable=Tru
 def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
     widget = gcmw().obtain_widget(widget_name, Slider)
     widget.set_params(min, max, step)
-    return widget.var
+    return widget.value
 
 
 def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]]) -> VarBase:

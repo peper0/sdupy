@@ -1,12 +1,10 @@
 TODO:
 - wbudowany logger - przyda się do oglądania updejtów zmiennych
-- persistent do imshow (i trzymamy wtedy jeden updater per okienko)
-- obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
-- suwak do wyboru ramki (najlepiej ze spinboxem), combo
 - ładowarka ramek do wyświetlenia imshowem
-- proxy: jak funkcja zwraca Var, to chcemy go raczej proxować niż trzymać Var w Var (np. jak recreatujemy widgeta)
-- forwardowanie wywołań funkcji na "var"
+- forwardowanie wywołań funkcji na "var" (var.__add__ i inne)
 - lista checkboxów (tablka?), sliderów, liczb (może wystarczy to ostatnie?) - lista lub np.ndarray - do rozważenia
+- obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
+- persistent do imshow (i trzymamy wtedy jeden updater per okienko)
 
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
   - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
