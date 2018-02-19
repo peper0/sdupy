@@ -14,6 +14,13 @@ from quamash import QEventLoop, QApplication
 default_main_window = None  # type: MainWindow
 
 
+def gcmw() -> MainWindow:
+    """
+    Get current main window.
+    """
+    return default_main_window
+
+
 def init_loop():
     app = QApplication(sys.argv)
 

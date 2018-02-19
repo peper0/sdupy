@@ -4,6 +4,9 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+from sdupy.reactive import VarBase
+from sdupy.studioapp import gcmw
+from sdupy.widgets import Slider
 from . import studioapp
 from .reactive.reactive import reactive_finalizable
 from .reactive import Var
@@ -24,7 +27,7 @@ def imshow(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
     :return:
     """
     assert isinstance(widget_name, str)
-    plot = studioapp.default_main_window.obtain_widget(widget_name, Plot)
+    plot = gcmw().obtain_widget(widget_name, Plot)
     axes_image = None
 
     if image is not None:
@@ -38,3 +41,14 @@ def imshow(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
     os.write(1, b"removing\n")
     if axes_image is not None:
         axes_image.remove()
+
+
+def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
+    widget = studioapp.default_main_window.obtain_widget(widget_name, Slider)
+    widget.set_params(min, max, step)
+    return widget.var
+
+
+def input_value_from_list(widget_name: str, allowed_values) -> VarBase:
+    # TODO: make some combobox
+    raise NotImplemented
