@@ -1,4 +1,5 @@
 import os
+from typing import Any, List, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -6,17 +7,15 @@ import numpy as np
 
 from sdupy.reactive import VarBase
 from sdupy.studioapp import gcmw
-from sdupy.widgets import Slider
-from . import studioapp
+from sdupy.widgets import ComboBox, Slider, VarsTable
 from .reactive.reactive import reactive_finalizable
-from .reactive import Var
 from .widgets import Plot
 
 kept_references = dict()  # Dict[str, Var]
 
 
 @reactive_finalizable()
-def imshow(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
+def display_image(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
     """
     :param widget_name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
@@ -43,12 +42,22 @@ def imshow(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
         axes_image.remove()
 
 
+imshow = display_image
+
+
+def display_variable(widget_name: str, var_name: str, var: VarBase, editable=True):
+    assert isinstance(widget_name, str)
+    vars_table = gcmw().obtain_widget(widget_name, VarsTable)
+    vars_table.insert_var(var_name, var, is_editable=editable)
+
+
 def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
-    widget = studioapp.default_main_window.obtain_widget(widget_name, Slider)
+    widget = gcmw().obtain_widget(widget_name, Slider)
     widget.set_params(min, max, step)
     return widget.var
 
 
-def input_value_from_list(widget_name: str, allowed_values) -> VarBase:
-    # TODO: make some combobox
-    raise NotImplemented
+def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]]) -> VarBase:
+    widget = gcmw().obtain_widget(widget_name, ComboBox)
+    widget.set_choices(choices)
+    return widget.data_var

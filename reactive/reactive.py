@@ -3,7 +3,7 @@ import inspect
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Set, Union
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Set, Union, overload
 
 from .var import Var, VarBase
 
@@ -61,7 +61,21 @@ def ensure_coro_func(f):
 CoroFunction = Callable[[], Coroutine]
 
 
-def reactive(args_as_vars: Set[str]=set()):
+@overload
+def reactive(f: Callable) -> Callable:
+    pass
+
+
+@overload
+def reactive(args_as_vars: Set[str]) -> Callable:
+    pass
+
+
+def reactive(args_as_vars=set()):
+    if callable(args_as_vars):
+        # a shortcut that allows simple @reactive instead of @reactive()
+        return reactive()(args_as_vars)
+
     def wrapper(f):
 
         if asyncio.iscoroutinefunction(f):

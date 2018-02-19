@@ -1,34 +1,133 @@
 import asyncio
 import logging
+from contextlib import suppress
+from typing import Any, Callable, List, NamedTuple
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import QAbstractTableModel, Qt
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
+from sdupy.reactive import VarBase
+from sdupy.reactive.var import myprint
+from .common.register import register_factory, register_widget
 from ..reactive import reactive
 from ..reactive.reactive import var_from_gen
-from .common.register import register_factory, register_widget
 
 
-@register_widget("data_table")
-class DataTable(QWidget):
+@register_widget("generic table")
+class Table(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
 
         self._table_view = QTableView(self)
+        self._table_view.horizontalHeader().setSectionsMovable(True)
+        self.layout.addWidget(self._table_view)
+
+
+@register_widget("variables table")
+class VarsTable(Table):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.model = VarsModel(self)
+        self._table_view.setModel(self.model)
+
+        self.insert_var = self.model.insert_var
+
+
+class VarsModel(QAbstractTableModel):
+    class VarInList(NamedTuple):
+        title: str
+        var: VarBase
+        notifier: Callable
+        is_editable: bool
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.vars = []  # type: List[VarsModel.VarInList]
+
+    def rowCount(self, parent=None):
+        return len(self.vars)
+
+    def columnCount(self, parent=None):
+        return 2
+
+    def data(self, index: QModelIndex, role=Qt.DisplayRole):
+        # myprint(index, index.row(), index.column(), role)
+        if index.isValid():
+            if index.row() < len(self.vars):
+                item = self.vars[index.row()]
+                if role == Qt.DisplayRole or role == Qt.EditRole:
+                    if index.column() == 0:
+                        return item.title
+                    elif index.column() == 1:
+                        return str(item.var.data)
+
+    def flags(self, index: QModelIndex):
+        if index.row() < len(self.vars):
+            item = self.vars[index.row()]
+            return super().flags(index) | (Qt.ItemIsEditable if item.is_editable else 0)
+        return super().flags(index)
+
+    def setData(self, index: QModelIndex, value: Any, role: int):
+        myprint('setData', index, index.row(), index.column(), role, value)
+        if index.isValid():
+            if index.row() < len(self.vars):
+                item = self.vars[index.row()]
+                converted_value = value
+                with suppress(Exception):
+                    converted_value = item.var.get().__class__(value)
+                myprint("setting to", repr(converted_value))
+                item.var.set(converted_value)
+                return True
+        return super().setData(index, value, role)
+
+    def remove_var(self, var):
+        indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.var == var]
+
+        myprint('before removal', len(self.vars))
+        for i in reversed(indices_for_removal):
+            self.beginRemoveRows(QModelIndex(), i, i)
+            del self.vars[i]
+            self.endRemoveRows()
+        myprint('after removal', len(self.vars))
+
+    def insert_var(self, title: str, var: VarBase, is_editable: bool):
+        assert var is not None
+        self.remove_var(var)
+
+        async def notify_changed():
+            for i, var_in_the_list in enumerate(self.vars):
+                myprint(var_in_the_list, var)
+                if var_in_the_list.var == var:
+                    self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
+
+        var.add_observer(notify_changed)
+
+        self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
+        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notify_changed, is_editable=is_editable))
+        self.endInsertRows()
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return "name" if section == 0 else "value"
+            # if orientation == Qt.Vertical and role == Qt.DisplayRole:
+            #    return self.data.index[section]
+
+
+@register_widget("data_table")
+class PandasTable(Table):
+    def __init__(self, parent):
+        super().__init__(parent)
         self.model = DataTreeModel(self)
         self._table_view.setModel(self.model)
         # self._table_view.setSortingEnabled(True)
-        
-        self._table_view.horizontalHeader().setSectionsMovable(True)
 
         self._filter_edit = QLineEdit(self)
         self._filter_edit.editingFinished.connect(lambda: self.model.set_query(self._filter_edit.text()))
-        self.layout.addWidget(self._filter_edit)
-        self.layout.addWidget(self._table_view)
+        self.layout.insertWidget(0, self._filter_edit)
 
     @reactive()
     def set_data(self, data: pd.DataFrame):
@@ -118,7 +217,7 @@ async def append_data_frame(gen):
 
 @register_factory("generated data table")
 def make_dt(parent):
-    dt = DataTable(parent)
+    dt = PandasTable(parent)
 
     async def set_data(parent):
         dt.set_data(await var_from_gen(append_data_frame(gen(100))))

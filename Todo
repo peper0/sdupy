@@ -5,6 +5,7 @@ TODO:
 - suwak do wyboru ramki (najlepiej ze spinboxem), combo
 - ładowarka ramek do wyświetlenia imshowem
 - proxy: jak funkcja zwraca Var, to chcemy go raczej proxować niż trzymać Var w Var (np. jak recreatujemy widgeta)
+- forwardowanie wywołań funkcji na "var"
 - lista checkboxów (tablka?), sliderów, liczb (może wystarczy to ostatnie?) - lista lub np.ndarray - do rozważenia
 
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować

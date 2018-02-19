@@ -92,7 +92,10 @@ class MainWindow(QMainWindow):
             if isinstance(factory_or_name, str):
                 factory_desc = widgets.registered_factories[factory_or_name]
             else:
-                factory_desc = [fd for fd in widgets.registered_factories.values() if fd.factory == factory_or_name][0]
+                factory_descs = [fd for fd in widgets.registered_factories.values() if fd.factory == factory_or_name]
+                if not factory_descs:
+                    raise Exception("not existent factory: '{}')".format(factory_or_name.__name__))
+                factory_desc = factory_descs[0]
             self.add_widget_from_factory(factory_desc, widget_name=name, title=name)
 
         return self.widgets[name].widget

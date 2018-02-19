@@ -11,14 +11,14 @@ import sys
 
 from quamash import QEventLoop, QApplication
 
-default_main_window = None  # type: MainWindow
+current_main_window = None  # type: MainWindow
 
 
 def gcmw() -> MainWindow:
     """
     Get current main window.
     """
-    return default_main_window
+    return current_main_window
 
 
 def init_loop():
@@ -40,8 +40,8 @@ def run_loop():
 
 
 def start(state_name):
-    global default_main_window
+    global current_main_window
     window = MainWindow(state_name=state_name)
-    default_main_window = window
+    current_main_window = window
     window.show()
     return window
