@@ -1,3 +1,6 @@
-from .studioapp import start
+from .studioapp import start, gcmw
 
-start
+__ALL__ = [
+    start,
+    gcmw
+    ]

@@ -6,6 +6,9 @@ TODO:
 - obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - persistent do imshow (i trzymamy wtedy jeden updater per okienko)
 
+- intowy slider skacz po 2
+- może jednak slider zamiast scroll bara skoro jest spinbox?
+
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
   - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
   - dużo telemetrii wczytanych z plików (dicty?)

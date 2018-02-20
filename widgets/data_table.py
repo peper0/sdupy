@@ -84,10 +84,10 @@ class VarsModel(QAbstractTableModel):
                 return True
         return super().setData(index, value, role)
 
-    def remove_var(self, var):
-        indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.var == var]
+    def remove_var(self, title):
+        indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.title == title]
 
-        myprint('before removal', len(self.vars))
+        myprint('before removal', len(self.vars), 'to remove', len(indices_for_removal))
         for i in reversed(indices_for_removal):
             self.beginRemoveRows(QModelIndex(), i, i)
             del self.vars[i]
@@ -96,7 +96,7 @@ class VarsModel(QAbstractTableModel):
 
     def insert_var(self, title: str, var: VarBase, is_editable: bool):
         assert var is not None
-        self.remove_var(var)
+        self.remove_var(title)
 
         async def notify_changed():
             for i, var_in_the_list in enumerate(self.vars):

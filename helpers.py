@@ -60,4 +60,6 @@ def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
 def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]]) -> VarBase:
     widget = gcmw().obtain_widget(widget_name, ComboBox)
     widget.set_choices(choices)
+    if widget.combo.currentIndex() < 0:
+        widget.combo.setCurrentIndex(0)
     return widget.data_var

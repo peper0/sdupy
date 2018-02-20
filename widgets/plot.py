@@ -1,3 +1,4 @@
+import matplotlib
 from PyQt5 import QtGui
 
 import matplotlib.pyplot as plt
@@ -9,6 +10,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from .common.register import register_widget
 
+matplotlib.rcParams.update({'font.size': 6})
 
 class Axes(QWidget):
     def __init__(self, parent):
@@ -31,7 +33,7 @@ class Axes(QWidget):
 
         self.axes = self.figure.add_subplot(111)
         self.axes.set_adjustable('datalim')  # use whole area when keeping aspect ratio of images
-        self.canvas.draw()
+        self.resizeEvent(None)
 
     def on_key_press(self, event):
         # implement the default mpl key press events described at
@@ -66,7 +68,7 @@ class Axes(QWidget):
         self.canvas.draw()
 
     def resizeEvent(self, a0: QtGui.QResizeEvent):
-        self.figure.tight_layout()
+        self.figure.tight_layout(pad=0.5)
 
     def dump_state(self):
         return dict(
