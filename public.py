@@ -1,7 +1,6 @@
 import asyncio
 
 import numpy as np
-
 from reactive import reactive
 
 
@@ -36,11 +35,6 @@ def gen_random(n):
 @reactive
 def add(a, b):
     return a + b
-
-
-@reactive
-def myprint(a):
-    print(a)
 
 
 @reactive

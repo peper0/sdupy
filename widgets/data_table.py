@@ -1,15 +1,14 @@
 import asyncio
-import logging
 from contextlib import suppress
 from typing import Any, Callable, List, NamedTuple
 
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
 from sdupy.reactive import VarBase
-from sdupy.reactive.var import myprint
 from .common.register import register_factory, register_widget
 from ..reactive import reactive
 from ..reactive.reactive import var_from_gen
@@ -25,6 +24,16 @@ class Table(QWidget):
         self._table_view = QTableView(self)
         self._table_view.horizontalHeader().setSectionsMovable(True)
         self.layout.addWidget(self._table_view)
+
+    def dump_state(self):
+        return dict(
+            header_state=bytes(self._table_view.horizontalHeader().saveState()).hex(),
+        )
+
+    def load_state(self, state: dict):
+        if 'header_state' in state:
+            self._table_view.horizontalHeader().restoreState(bytes.fromhex(state['header_state']))
+
 
 
 @register_widget("variables table")
@@ -57,7 +66,6 @@ class VarsModel(QAbstractTableModel):
         return 2
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole):
-        # myprint(index, index.row(), index.column(), role)
         if index.isValid():
             if index.row() < len(self.vars):
                 item = self.vars[index.row()]
@@ -74,12 +82,10 @@ class VarsModel(QAbstractTableModel):
         return super().flags(index)
 
     def setData(self, index: QModelIndex, value: Any, role: int):
-        myprint('setData', index, index.row(), index.column(), role, value)
         if index.isValid():
             if index.row() < len(self.vars):
                 item = self.vars[index.row()]
                 converted_value = item.to_value(value)
-                myprint("setting to", repr(converted_value))
                 item.var.set(converted_value)
                 return True
         return super().setData(index, value, role)
@@ -87,12 +93,10 @@ class VarsModel(QAbstractTableModel):
     def remove_var(self, title):
         indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.title == title]
 
-        myprint('before removal', len(self.vars), 'to remove', len(indices_for_removal))
         for i in reversed(indices_for_removal):
             self.beginRemoveRows(QModelIndex(), i, i)
             del self.vars[i]
             self.endRemoveRows()
-        myprint('after removal', len(self.vars))
 
     def clear(self):
         if len(self.vars) > 0:
@@ -106,7 +110,6 @@ class VarsModel(QAbstractTableModel):
 
         async def notify_changed():
             for i, var_in_the_list in enumerate(self.vars):
-                myprint(var_in_the_list, var)
                 if var_in_the_list.var == var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
 
@@ -231,3 +234,89 @@ def make_dt(parent):
     asyncio.ensure_future(set_data(parent))
 
     return dt
+
+
+import logging
+import logging.handlers
+
+
+class LogRecordsModel(QAbstractTableModel, logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.records = []  # type: List[logging.LogRecord]
+        self.columns = ['timestamp', 'name', 'level', 'message', 'path', 'file']
+        self.records_limit = 100000
+        self.bg_colors = {
+            logging.CRITICAL: QColor(Qt.magenta).lighter(),
+            logging.ERROR: QColor(Qt.red).lighter(),
+            logging.WARNING: QColor(Qt.yellow).lighter(),
+            logging.INFO: QColor(Qt.green).lighter(),
+            logging.DEBUG: QColor(Qt.cyan).lighter(),
+        }
+
+    def emit(self, record: logging.LogRecord):
+        if len(self.records) > self.records_limit:
+            chunk_size = 10
+            self.beginRemoveRows(QModelIndex(), 0, chunk_size - 1)
+            del self.records[0:chunk_size]  # it's probably faster to remove in greater chunks
+            self.endRemoveRows()
+
+        try:
+            self.beginInsertRows(QModelIndex(), len(self.records), len(self.records))
+            self.records.append(record)
+            self.endInsertRows()
+        except Exception:
+            self.handleError(record)
+        if len(self.records) % 10 == 0:
+            logging.fatal('has %d records', len(self.records))
+
+    def __repr__(self):
+        level = logging.getLevelName(self.level)
+        return '<%s (%s)>' % (self.__class__.__name__, level)
+
+    def rowCount(self, parent=None):
+        return len(self.records)
+
+    def columnCount(self, parent=None):
+        return len(self.columns)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if index.row() < len(self.records) and index.column() < len(self.columns):
+                record = self.records[index.row()]
+                col_name = self.columns[index.column()]
+                if role == Qt.DisplayRole:
+                    if col_name == 'message':
+                        return record.getMessage()
+                    elif col_name == 'level':
+                        return record.levelname
+                    elif col_name == 'timestamp':
+                        return '{:.3f}'.format(record.relativeCreated)
+                    elif col_name == 'path':
+                        return record.pathname
+                    elif col_name == 'file':
+                        return record.filename + ":" + str(record.lineno)
+                    elif col_name == 'name':
+                        return record.name
+                elif role == Qt.BackgroundColorRole:
+                    # TODO interpolate between two nearest?
+                    if record.levelno in self.bg_colors:
+                        return self.bg_colors[record.levelno]
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self.columns[section]
+
+
+global_logger_handler = LogRecordsModel()
+
+logging.getLogger().addHandler(global_logger_handler)
+logging.getLogger().setLevel(logging.DEBUG)
+global_logger_handler.setLevel(logging.DEBUG)
+
+
+@register_widget("logs")
+class Logs(Table):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._table_view.setModel(global_logger_handler)

@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
@@ -7,6 +8,8 @@ from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Gene
 
 from sdupy.reactive.var import RVal, ensure_coro_func
 from .var import VarBase
+
+logger = logging.getLogger('reactive')
 
 
 def args_need_reaction(args: tuple, kwargs: dict):
@@ -188,34 +191,24 @@ class YieldingReactor(ReactorBase):
         self._iterator = None  # type: Iterator
 
     def cleanup(self):
-        import os
-        os.write(1, "cleanup{}{}\n".format(self, self._iterator).encode())
         if self._iterator:
             with suppress(StopIteration):
-                os.write(1, "nexing{}{}\n".format(self._iterator.gi_running, self._iterator.gi_frame).encode())
                 next(self._iterator)
-                os.write(1, b"ehe\n")
                 raise Exception("two yields in function %s")
+            logger.debug('deleting reactor %s', self)
             unfinished_iterators.remove(self._iterator)
-            os.write(1, b"fin\n")
             self._iterator = None
-        os.write(1, b"cleanup fin\n")
 
     def update(self):
-        import os
-        os.write(1, "update {} {}\n".format(self, self._iterator).encode())
         self.cleanup()
         self._iterator = iter(self._binding())
         unfinished_iterators.add(self._iterator)
         self._result_var_weak().provide(next(self._iterator))
-        import os
-        os.write(1, "aaaanexing{} {}\n".format(self, self._iterator).encode())
 
     def build_result(self):
         self.update()
-        import os
         self._result_var_weak().on_dispose = ensure_coro_func(self.cleanup)
-        os.write(1, "new {} {}\n".format(self, self._iterator).encode())
+        logger.debug('built reactor %s %s', self, self._iterator)
 
 
 class AsyncYieldingReactor(ReactorBase):

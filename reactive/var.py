@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import weakref
 from abc import abstractmethod
@@ -8,9 +9,7 @@ from typing import Any, Awaitable, Callable, Coroutine, NamedTuple, Union
 CoroutineFunction = Callable[[], Coroutine]
 Observer = Union[Callable[[], None], CoroutineFunction]
 
-
-def myprint(*args):
-    os.write(1, (' '.join(map(str, args))+'\n').encode())
+logger = logging.getLogger('reactive')
 
 
 class QueueItem(NamedTuple):
@@ -22,31 +21,25 @@ class QueueItem(NamedTuple):
         return self.priority < other.priority
 
 
-def rethrow(f):
-    # print("finished: %s" % f)
-    if f.cancelled():
-        print("task was canceled")
-        return
-    e = f.exception()
-    if e:
-        print("err: ", e.__class__, e)
-        myprint("ERROR==================: ", e.__class__, e)
-        if isinstance(e, asyncio.CancelledError):
-            print("task was canceled 2")
-        else:
-            raise e
-
-
 class Refresher:
     def __init__(self):
         self.queue = asyncio.PriorityQueue()
-        print("starting")
         self.task = None  # type: asyncio.Task
 
     def maybe_start_task(self):
         if not self.task or self.task.done():
             self.task = asyncio.ensure_future(self.run())  # type: asyncio.Task
-            self.task.add_done_callback(rethrow)
+            self.task.add_done_callback(self._handle_done)
+
+    @staticmethod
+    def _handle_done(f):
+        if f.cancelled():
+            logger.warning('refresh task was cancelled')
+            return
+        e = f.exception()
+        if e:
+            logger.exception('refresh task finished with exception, rethrowing')
+            raise e
 
     def add_coroutine(self, hash, coro):
         t = QueueItem(1, hash, coro)
@@ -69,7 +62,7 @@ class Refresher:
                 try:
                     await update.awaitable
                 except Exception as e:
-                    myprint("ERROR in some handler ==================: ", e.__class__, e)
+                    logger.exception('exception when notifying observer (ignoring)')
 
 
 refresher = None
@@ -113,7 +106,6 @@ class VarBase:
             self.disposed = True
 
     def add_observer(self, observer: Observer):
-        myprint("added observer", observer, 'to', self)
         self._observers.add(observer)
 
     def keep_reference(self, o):
@@ -159,9 +151,6 @@ class RVal(VarBase):
         self._target_var = None
         self._updater = None
 
-    def _act_as_proxy(self):
-        return isinstance(self._data_or_target, VarBase)
-
     def provide(self, data_or_target):
         if isinstance(data_or_target, VarBase):
             self._target_var = data_or_target
@@ -185,16 +174,8 @@ class RVal(VarBase):
             return self._target_var.set(value)
         else:
             raise Exception("read-only variable")
-        self._data = value
-        self.notify_observers()
-# def __getattr__(self, item):
-#    print("getattr %s"% item)
-# def __getattribute__(self, item):
-#    print("getattribute %s"% item)
 
-# @reactive
-# def __add__(x, y):
-#    return x + y
+
 def ensure_coro_func(f):
     if asyncio.iscoroutinefunction(f):
         return f

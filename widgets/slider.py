@@ -4,7 +4,6 @@ from PyQt5 import QtCore
 from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 
 from sdupy.reactive import Var, reactive
-from sdupy.reactive.var import myprint
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
 
@@ -38,7 +37,6 @@ class Slider(QWidget):
     @reactive
     def _set_vals(self, source_tup, value):
         source, = source_tup
-        myprint(source, value)
         if source == self._slider_val:
             if self._uses_integer:
                 value /= self._slider_mult
@@ -57,7 +55,6 @@ class Slider(QWidget):
         else:
             self._slider_mult = 1
             self.spin_box.setDecimals(0)
-        myprint("uses int", self._uses_integer())
         self.slider.setRange(int(min * self._slider_mult), int(max * self._slider_mult))
         self.slider.setSingleStep(int(step * self._slider_mult))
         self.spin_box.setRange(min, max)

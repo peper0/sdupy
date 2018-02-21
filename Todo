@@ -5,11 +5,22 @@ TODO:
 - lista checkboxów (tablka?), sliderów, liczb (może wystarczy to ostatnie?) - lista lub np.ndarray - do rozważenia
 - obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - persistent do imshow (i trzymamy wtedy jeden updater per okienko)
+- object explorer - tree do oglądania stanu obiektu (używa dir() do pobrania dzieci); pluginy do ładnego printowania :)
 
+= slider
 - intowy slider skacz po 2
 - może jednak slider zamiast scroll bara skoro jest spinbox?
 - zamykanie widgetów powinno (może) je wywalać z widgetów
 
+= tabelka
+- zapis geometrii
+- ukrywanie/pokazywanie kolumn (+ zapis tego)
+- filtrowanie każdej kolumny: lista wartości z checkboxami, regexp, wyrażenie pythonowe (np. 'V>6 or V%2==0')
+- sortowanie?
+- dokładanie kolumn będących funkcjami pozostałych?
+
+
+= inne
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
   - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
   - dużo telemetrii wczytanych z plików (dicty?)
