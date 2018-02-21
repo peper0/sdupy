@@ -45,10 +45,16 @@ def display_image(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
 imshow = display_image
 
 
-def display_variable(widget_name: str, var_name: str, var: VarBase, editable=True):
+def clear_variables(widget_name: str):
     assert isinstance(widget_name, str)
     vars_table = gcmw().obtain_widget(widget_name, VarsTable)
-    vars_table.insert_var(var_name, var, is_editable=editable)
+    vars_table.clear()
+
+
+def display_variable(widget_name: str, var_name: str, var: VarBase, to_value=None):
+    assert isinstance(widget_name, str)
+    vars_table = gcmw().obtain_widget(widget_name, VarsTable)
+    vars_table.insert_var(var_name, var, to_value=to_value)
 
 
 def input_value_from_range(widget_name: str, min, max, step) -> VarBase:

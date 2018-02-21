@@ -35,6 +35,8 @@ class VarsTable(Table):
         self._table_view.setModel(self.model)
 
         self.insert_var = self.model.insert_var
+        self.remove_var = self.model.remove_var
+        self.clear = self.model.clear
 
 
 class VarsModel(QAbstractTableModel):
@@ -42,7 +44,7 @@ class VarsModel(QAbstractTableModel):
         title: str
         var: VarBase
         notifier: Callable
-        is_editable: bool
+        to_value: Callable[[str], Any]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -68,7 +70,7 @@ class VarsModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() < len(self.vars):
             item = self.vars[index.row()]
-            return super().flags(index) | (Qt.ItemIsEditable if item.is_editable else 0)
+            return super().flags(index) | (Qt.ItemIsEditable if item.to_value else 0)
         return super().flags(index)
 
     def setData(self, index: QModelIndex, value: Any, role: int):
@@ -76,9 +78,7 @@ class VarsModel(QAbstractTableModel):
         if index.isValid():
             if index.row() < len(self.vars):
                 item = self.vars[index.row()]
-                converted_value = value
-                with suppress(Exception):
-                    converted_value = item.var.get().__class__(value)
+                converted_value = item.to_value(value)
                 myprint("setting to", repr(converted_value))
                 item.var.set(converted_value)
                 return True
@@ -94,7 +94,13 @@ class VarsModel(QAbstractTableModel):
             self.endRemoveRows()
         myprint('after removal', len(self.vars))
 
-    def insert_var(self, title: str, var: VarBase, is_editable: bool):
+    def clear(self):
+        if len(self.vars) > 0:
+            self.beginRemoveRows(QModelIndex(), 0, len(self.vars)-1)
+            self.vars.clear()
+            self.endRemoveRows()
+
+    def insert_var(self, title: str, var: VarBase, to_value: Callable[[str], Any]):
         assert var is not None
         self.remove_var(title)
 
@@ -107,7 +113,7 @@ class VarsModel(QAbstractTableModel):
         var.add_observer(notify_changed)
 
         self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
-        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notify_changed, is_editable=is_editable))
+        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notify_changed, to_value=to_value))
         self.endInsertRows()
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):

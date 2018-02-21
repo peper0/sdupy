@@ -8,6 +8,7 @@ TODO:
 
 - intowy slider skacz po 2
 - może jednak slider zamiast scroll bara skoro jest spinbox?
+- zamykanie widgetów powinno (może) je wywalać z widgetów
 
 - "repozytorium zmiennych" - jakiś zbiór (drzewo?) nazwanych zmiennych z różnymi właściwościami po których możemy filtrować
   - odbierany strumień z serial porta, potem zramkowany, potem zdekodowany
@@ -21,6 +22,24 @@ TODO:
   - x: min, max, steps (downsampling ad-hoc)
   - wyrażenie (np. data_table['kolumna'])
   -
+
+
+Integracja:
+Co chcemy osiągnąć:
+- możliwość uruchominia jakiejś częściowej aplikacji
+- możliwość działania w aplikacji z poziomu jupytera
+- możliwość debugowania kodu, idealnie gdyby nawet tego jupyterowego
+- wyświetlanie zmiennych np. w pycharmie
+- podpowiadanie składni w nowo pisanym kodzie - jupyter to zapewnia
+
+
+Co umiemy:
+- startowanie jupytera z poziomu pythona - wtedy można do odpalić pod debuggerem
+- podłączenie się zdalnym debuggerem poprzez gate'a utworzonego wewnątrz kernela (ale darmowy pycharm tego nie ma)
+
+Co można spróbować:
+- startowanie aplikacji, która startuje jupytera (tak, że można się podłączyć przeglądarką i coś dopisywać)
+
 
 
 Adaptery itp:
