@@ -104,8 +104,9 @@ class MainWindow(QMainWindow):
         self.save_state_action()
 
     def save_state_action(self):
+        state_as_json = json.dumps(self.dump_state())  # we do it before overwritting a file since there may be error
         with open("{}.state.json".format(self.state_name), 'w') as f:
-            json.dump(self.dump_state(), f)
+            f.write(state_as_json)
 
     def dump_state(self):
         widgets_state = []

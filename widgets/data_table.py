@@ -1,4 +1,6 @@
 import asyncio
+import io
+import traceback
 from contextlib import suppress
 from typing import Any, Callable, List, NamedTuple
 
@@ -285,9 +287,15 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
             if index.row() < len(self.records) and index.column() < len(self.columns):
                 record = self.records[index.row()]
                 col_name = self.columns[index.column()]
-                if role == Qt.DisplayRole:
+                if role == Qt.DisplayRole or role == Qt.ToolTipRole:
                     if col_name == 'message':
-                        return record.getMessage()
+                        if record.exc_info:
+                            if role == Qt.ToolTipRole:
+                                return record.getMessage() + '\n' + self.formatException(record.exc_info)
+                            else:
+                                return record.getMessage() + " (see tooltop for more)"
+                        else:
+                            return record.getMessage()
                     elif col_name == 'level':
                         return record.levelname
                     elif col_name == 'timestamp':
@@ -307,12 +315,36 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.columns[section]
 
+    def formatException(self, ei):
+        """
+        Stolen from logging module.
+
+        Format and return the specified exception information as a string.
+
+        This default implementation just uses
+        traceback.print_exception()
+        """
+        sio = io.StringIO()
+        tb = ei[2]
+        # See issues #9427, #1553375. Commented out for now.
+        #if getattr(self, 'fullstack', False):
+        #    traceback.print_stack(tb.tb_frame.f_back, file=sio)
+        traceback.print_exception(ei[0], ei[1], tb, None, sio)
+        s = sio.getvalue()
+        sio.close()
+        if s[-1:] == "\n":
+            s = s[:-1]
+        return s
+
 
 global_logger_handler = LogRecordsModel()
 
 logging.getLogger().addHandler(global_logger_handler)
-logging.getLogger().setLevel(logging.DEBUG)
-global_logger_handler.setLevel(logging.DEBUG)
+#logging.getLogger().setLevel(logging.DEBUG)
+#global_logger_handler.setLevel(logging.DEBUG)
+
+logging.getLogger().setLevel(logging.INFO)
+global_logger_handler.setLevel(logging.INFO)
 
 
 @register_widget("logs")

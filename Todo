@@ -9,6 +9,7 @@ TODO:
 
 = slider
 - intowy slider skacz po 2
+- kasowanie rysowaczy nie działa jak jest reactive w reactive
 - może jednak slider zamiast scroll bara skoro jest spinbox?
 - zamykanie widgetów powinno (może) je wywalać z widgetów
 

@@ -22,6 +22,7 @@ class Slider(QWidget):
         self.layout.addWidget(self.spin_box)
 
         self.slider.setOrientation(QtCore.Qt.Horizontal)
+        self.slider.setPageStep(1)
 
         self._slider_mult = 1
 
@@ -30,6 +31,9 @@ class Slider(QWidget):
         self.value = Var()
         self.refs = [self._set_vals((val,), val)
                      for val in [self._spin_val, self._slider_val, self.value]]
+        self._step = None
+        self._min = None
+        self._max = None
 
     def _uses_integer(self):
         return isinstance(self._slider_mult, int)
@@ -48,7 +52,11 @@ class Slider(QWidget):
         if source != self._spin_val: self._spin_val.set(value)
         if source != self.value: self.value.set(value)
 
-    def set_params(self, min, max, step=1, page_step=None):
+    def set_params(self, min, max, step=1):
+        self._step = step
+        self._min = min
+        self._max = max
+
         if isinstance(min, float) or isinstance(max, float) or isinstance(step, float):
             self._slider_mult = 1.0 / step
             self.spin_box.setDecimals(ceil(-log10(step)))
@@ -59,3 +67,20 @@ class Slider(QWidget):
         self.slider.setSingleStep(int(step * self._slider_mult))
         self.spin_box.setRange(min, max)
         self.spin_box.setSingleStep(step)
+
+        if self.value.get() > max:
+            self.value.set(max)
+        elif self.value.get() < min:
+            self.value.set(min)
+
+    def dump_state(self):
+        return dict(
+            min=self._min,
+            max=self._max,
+            step=self._step,
+            value=self.value.get()
+        )
+
+    def load_state(self, state: dict):
+        self.set_params(state['min'], state['max'], state['step'])
+        self.value.set(state['value'])

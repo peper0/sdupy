@@ -32,14 +32,18 @@ def display_image(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
     if image is not None:
         kwargs.setdefault('aspect', 'equal')
         kwargs.setdefault('interpolation', 'nearest')
-        if use_bgr and len(image.shape) == 3 and image.shape[2] == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if use_bgr and len(image.shape) == 3:
+            if image.shape[2] == 3:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            elif image.shape[2] == 4:
+                image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
         axes_image = plot.axes.imshow(image, **kwargs)  # type: plt.image.AxesImage
     plot.draw()
     yield
     os.write(1, b"removing\n")
     if axes_image is not None:
         axes_image.remove()
+        plot.draw()
 
 
 imshow = display_image
