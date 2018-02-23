@@ -1,4 +1,5 @@
 TODO:
+- plik py zamiast notebooka i praca w konsoli
 - wbudowany logger - przyda się do oglądania updejtów zmiennych
 - ładowarka ramek do wyświetlenia imshowem
 - forwardowanie wywołań funkcji na "var" (var.__add__ i inne)
@@ -6,6 +7,8 @@ TODO:
 - obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - persistent do imshow (i trzymamy wtedy jeden updater per okienko)
 - object explorer - tree do oglądania stanu obiektu (używa dir() do pobrania dzieci); pluginy do ładnego printowania :)
+- implicit zależności reaktywnych funkcji - albo lecieć po argumentach domyślnych, albo parametr do reactive
+- memo do jednej zmiennej (jak jest tekstowa i długa)
 
 = slider
 - intowy slider skacz po 2
