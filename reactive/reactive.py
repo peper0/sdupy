@@ -65,13 +65,21 @@ def reactive(args_as_vars: Set[str]) -> Callable:
     pass
 
 
+def update_kwargs_with_defaults(func, args, kwargs):
+    signature = inspect.signature(func)
+    for i, (k, v) in enumerate(signature.parameters.items()):
+        #print("arg", i, k, v, len(args))
+        if i >= len(args) and v.default is not inspect.Parameter.empty and k not in kwargs:
+            kwargs[k] = v.default
+    return kwargs
+
+
 def reactive(args_as_vars=set()):
     if callable(args_as_vars):
         # a shortcut that allows simple @reactive instead of @reactive()
         return reactive()(args_as_vars)
 
     def wrapper(f):
-
         if asyncio.iscoroutinefunction(f):
             factory = AsyncReactor
         elif hasattr(f, '__call__'):
@@ -80,6 +88,11 @@ def reactive(args_as_vars=set()):
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(f)))
 
         def wrapped(*args, **kwargs):
+            #print("args0", args)
+            #print("kwargs0", kwargs)
+            kwargs = update_kwargs_with_defaults(f, args, kwargs)  # handle vars in default args
+            #print("kwargs", kwargs)
+
             if args_need_reaction(args, kwargs):
                 binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
                 var = RVal()
@@ -104,6 +117,7 @@ def reactive_finalizable(args_as_vars: Set[str]=set()):
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(f)))
 
         def wrapped(*args, **kwargs):
+            kwargs = update_kwargs_with_defaults(f, args, kwargs)  # handle vars in default args
             binding = Binding(f, args_as_vars=args_as_vars, args=args, kwargs=kwargs)
             var = RVal()
             factory(var, binding).build_result()
