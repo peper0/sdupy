@@ -8,7 +8,7 @@ import numpy as np
 from sdupy.reactive import VarBase
 from sdupy.studioapp import gcmw
 from sdupy.widgets import ComboBox, Slider, VarsTable
-from .reactive.reactive import reactive_finalizable
+from .reactive.reactive import reactive_finalizable, reactive
 from .widgets import Plot
 
 kept_references = dict()  # Dict[str, Var]
@@ -61,15 +61,23 @@ def display_variable(widget_name: str, var_name: str, var: VarBase, to_value=Non
     vars_table.insert_var(var_name, var, to_value=to_value)
 
 
+@reactive
 def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
     widget = gcmw().obtain_widget(widget_name, Slider)
     widget.set_params(min, max, step)
     return widget.value
 
 
+@reactive
 def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]]) -> VarBase:
     widget = gcmw().obtain_widget(widget_name, ComboBox)
     widget.set_choices(choices)
     if widget.combo.currentIndex() < 0:
         widget.combo.setCurrentIndex(0)
     return widget.data_var
+
+
+def func():
+    print(333)
+    a=4
+    print(a)
