@@ -39,6 +39,8 @@ class MainWindow(QMainWindow):
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.add_menu)
 
+        self.close_callback = None
+
         for factory_desc in widgets.registered_factories.values():
             self.add_factory_to_gui(factory_desc)
 
@@ -102,6 +104,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, a0: QCloseEvent):
         self.save_state_action()
+        if self.close_callback:
+            self.close_callback()
 
     def save_state_action(self):
         state_as_json = json.dumps(self.dump_state())  # we do it before overwritting a file since there may be error

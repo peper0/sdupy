@@ -1,5 +1,5 @@
-from .reactive import reactive
-from .var import VarBase, Var, wait_for_var
+from .decorators import reactive, reactive_finalizable
+from .var import Var, VarBase, wait_for_var
 
 
 @reactive()

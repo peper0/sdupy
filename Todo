@@ -1,9 +1,9 @@
 TODO:
 - plik py zamiast notebooka i praca w konsoli
-- wbudowany logger - przyda się do oglądania updejtów zmiennych
+- drzewko kategorii do loggera z możliwością wyboru poziomu logowania dla każdego
 - ładowarka ramek do wyświetlenia imshowem
 - forwardowanie wywołań funkcji na "var" (var.__add__ i inne)
-- lista checkboxów (tablka?), sliderów, liczb (może wystarczy to ostatnie?) - lista lub np.ndarray - do rozważenia
+- ujednolicić wiązanie var z kontrolkami
 - obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - persistent do imshow (i trzymamy wtedy jeden updater per okienko)
 - object explorer - tree do oglądania stanu obiektu (używa dir() do pobrania dzieci); pluginy do ładnego printowania :)
@@ -15,6 +15,7 @@ TODO:
 - kasowanie rysowaczy nie działa jak jest reactive w reactive
 - może jednak slider zamiast scroll bara skoro jest spinbox?
 - zamykanie widgetów powinno (może) je wywalać z widgetów
+- tabelda do arrayów numpyowych
 
 = tabelka
 - zapis geometrii
@@ -22,6 +23,44 @@ TODO:
 - filtrowanie każdej kolumny: lista wartości z checkboxami, regexp, wyrażenie pythonowe (np. 'V>6 or V%2==0')
 - sortowanie?
 - dokładanie kolumn będących funkcjami pozostałych?
+
+
+# rekurencyjne Vary:
+## proponowane rozwiązanie
+- getattr implementujemy jako reactive(getattr)(self, attr). Dzięki temu podłączymy się jako obserwator do selfa. Zwrócona wartość będzie Varem, który zawiera albo te dane co dany atrybut (jeśli jest polem) albo "bound method".
+- __call__ jest reaktywnym forwarderem
+- pobranie atrybutu wywołuje zreaktywizowaną wersję takiego atrybutu w trzymanym obiekcie (reactive(getattr(self, attr)
+- jesli tym atrybutem jest funkcja
+
+
+## atrybuty
+- operatory binarne
+- operatory z przypisaniem
+- append, insert
+- call
+- remove
+- getitem
+- setitem
+- delitem
+- iter
+- keys
+- values
+- items
+
+## problemy
+
+
+# dane, które chcemy wizualizować/pobierać
+- liczba (w jakimś zakresie, z jakimś stepem) - suwak + spin box
+- dowolne wyrażenie pythonowe - edit, komórki w tabelce, wieloliniowy edit
+- nazwa pliku - edit z guzikiem do okna dialogowego
+- dowolny obiekt pythonowy jako drzewko (z możliwością wstawiania nowych elementów do list, wpisywania wyrażeń pythonowych)
+- np.ndarray jako tabelka (najlepiej z możliwością wprowadzenia wyrażenia slicującego)
+- pandas data table jako tabelka z możliwościa filtrowania i sortowania a także edycji danych
+- obrazek jako np.ndarray
+- graphviz (w postaci możliwie surowych struktur pythonowych tłumaczonych prawie 1-1 na dota)
+- pandas data table oraz np.ndarray jako różne wykresy z matplotlib, a może też pandas i seaborn
+
 
 
 = inne
@@ -39,6 +78,16 @@ TODO:
   -
 
 
+# var jako parametr czy wartość zwracana?
+## za wartością zwracaną
+- to jedyne sensowne w przypadku read-only wartości (np. jakaś zewnętrzna mierzona wartość)
+- var może trzymać własność różnych rzeczy (i np. znikać z tabelki po zniszczeniu)
+- czasem będzie to po prostu opakowane property qtowe
+
+## za parametrem
+- to jedyne sensowne w przypadku kontrolek jedynie wyświetlających (np. imshow)
+- czasem po prostu mamy wartość i kontrolka może z niej korzystać
+
 Integracja:
 Co chcemy osiągnąć:
 - możliwość uruchominia jakiejś częściowej aplikacji
@@ -54,7 +103,8 @@ Co umiemy:
 
 Co można spróbować:
 - startowanie aplikacji, która startuje jupytera (tak, że można się podłączyć przeglądarką i coś dopisywać)
-
+- podłączenie konsolką ipythonową do kernela jupyterowego
+- plugin do "execute region" (ew. z uwzględnieniem rozdziele
 
 
 Adaptery itp:

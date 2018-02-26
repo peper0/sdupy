@@ -1,10 +1,11 @@
 import asyncio
 import gc
+import weakref
 
 import asynctest
 
-from .reactive import reactive, reactive_finalizable, var_from_gen
-from .var import VarBase, wait_for_var
+from .decorators import reactive, reactive_finalizable, var_from_gen
+from .var import Var, VarBase, wait_for_var
 
 
 @reactive()
@@ -124,10 +125,12 @@ class ReactiveWithYield(asynctest.TestCase):
         # await res.dispose()
         del b
         gc.collect()
-        print(gc.get_referrers(res))
+        weak_res = weakref.ref(res)
+        # print(gc.get_referrers(res))
         del res
         gc.collect()
-        # await asyncio.sleep(1)
+        await wait_for_var()
+        await asyncio.sleep(1)
         self.assertEqual(inside, 0)
         print("finished)")
 

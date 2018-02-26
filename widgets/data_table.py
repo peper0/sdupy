@@ -1,7 +1,6 @@
 import asyncio
 import io
 import traceback
-from contextlib import suppress
 from typing import Any, Callable, List, NamedTuple
 
 import numpy as np
@@ -13,7 +12,7 @@ from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 from sdupy.reactive import VarBase
 from .common.register import register_factory, register_widget
 from ..reactive import reactive
-from ..reactive.reactive import var_from_gen
+from ..reactive.decorators import var_from_gen
 
 
 @register_widget("generic table")

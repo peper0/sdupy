@@ -8,7 +8,7 @@ import numpy as np
 from sdupy.reactive import VarBase
 from sdupy.studioapp import gcmw
 from sdupy.widgets import ComboBox, Slider, VarsTable
-from .reactive.reactive import reactive_finalizable, reactive
+from .reactive.decorators import reactive, reactive_finalizable
 from .widgets import Plot
 
 kept_references = dict()  # Dict[str, Var]
