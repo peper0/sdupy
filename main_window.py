@@ -9,15 +9,17 @@ from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 from . import widgets
 from .widgets.common.register import FactoryDesc
 
+current_main_window = None  # type: MainWindow
+state_name = 'default'
+
+logging.basicConfig(level=logging.INFO)
+
 
 class WidgetInstance(NamedTuple):
     widget: QWidget
     name: str  # used to programatically identify widget instance (in configs, in function calls)
     dock_widget: QDockWidget
     factory_name: str
-
-
-logging.basicConfig(level=logging.INFO)
 
 
 class MainWindow(QMainWindow):
@@ -146,3 +148,30 @@ class MainWindow(QMainWindow):
                         "ignoring exception during restoring widget from factory '{}".format(factory_name))
         if 'state' in state:
             self.restoreState(bytes.fromhex(state['state']))
+
+
+def gcmw() -> MainWindow:
+    """
+    Get current main window.
+    """
+    if not current_main_window:
+        main_window(state_name)
+    return current_main_window
+
+
+def main_window(state_name_):
+    global state_name
+    global current_main_window
+    state_name = state_name_
+    main_window = MainWindow(state_name=state_name)
+    current_main_window = main_window
+    main_window.show()
+
+    def window_closed():
+        global current_main_window
+        if current_main_window == main_window:
+            current_main_window = None
+
+    main_window.close_callback = window_closed()
+
+    return main_window
