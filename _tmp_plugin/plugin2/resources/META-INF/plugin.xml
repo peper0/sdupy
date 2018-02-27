@@ -1,0 +1,45 @@
+<idea-plugin>
+  <id>pl.lakota.tomasz.idea.plugin2</id>
+  <name>Plugin tomka</name>
+  <category>Editor</category>
+  <version>1.0.1</version>
+  <vendor email="tomasz@lakota.pl" url="http://www.yourcompany.com">Tomasz Łakota</vendor>
+
+  <description><![CDATA[
+      Mój superowy plugin.<br>
+      <em>most HTML tags may be used</em>
+    ]]></description>
+
+  <change-notes><![CDATA[
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>
+    ]]>
+  </change-notes>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+  <idea-version since-build="171.0"/>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+       on how to target different products -->
+  <depends>com.intellij.modules.lang</depends>
+  <depends>com.intellij.modules.python</depends>
+
+  <!--<extensions defaultExtensionNs="com.intellij">-->
+    <!--&lt;!&ndash; Add your extensions here &ndash;&gt;-->
+  <!--</extensions>-->
+
+  <actions>
+    <group id="MyPlugin.SampleMenu" text="_Sample Menu" description="Sample menu">
+      <add-to-group group-id="EditMenu" anchor="last"  />
+      <action id="Textboxes" class="tomek.TextBoxes" text="Text _Boxes" description="A test menu item" />
+    </group>
+    <!-- Add your actions here -->
+    <action id="another" class="tomek.PyExecuteRegionAction" text="PyExecuteRegionAction" description="Execute region in console">
+      <add-to-group group-id="EditMenu" anchor="last"/>
+      <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="ExecuteInPyConsoleAction"/>
+
+      <keyboard-shortcut keymap="$default" first-keystroke="control alt E"/>
+    </action>
+  </actions>
+
+</idea-plugin>
