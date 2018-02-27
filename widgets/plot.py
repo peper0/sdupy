@@ -1,6 +1,5 @@
 import matplotlib
 from PyQt5 import QtGui
-
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
@@ -11,6 +10,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from .common.register import register_widget
 
 matplotlib.rcParams.update({'font.size': 6})
+
+
+MODIFIER_KEYS = set(['shift', 'ctrl', 'alt'])
 
 class Axes(QWidget):
     def __init__(self, parent):
@@ -29,16 +31,26 @@ class Axes(QWidget):
         self.layout.addWidget(self.mpl_toolbar)
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('scroll_event', self.on_scroll)
+        self.canvas.mpl_connect('key_release_event', self.on_key_release)
         self.mpl_toolbar.pan()  # we usually want to pan with mouse, since zooming is on the scroll
+
+        self.current_modifiers = set()
 
         self.axes = self.figure.add_subplot(111)
         self.axes.set_adjustable('datalim')  # use whole area when keeping aspect ratio of images
         self.resizeEvent(None)
 
     def on_key_press(self, event):
+        if event.key in MODIFIER_KEYS:
+            self.current_modifiers.add(event.key)
+
         # implement the default mpl key press events described at
         # http://matplotlib.org/users/navigation_toolbar.html#navigation-keyboard-shortcuts
         key_press_handler(event, self.canvas, self.mpl_toolbar)
+
+    def on_key_release(self, event):
+        if event.key in MODIFIER_KEYS and event.key in self.current_modifiers:
+            self.current_modifiers.remove(event.key)
 
     def on_scroll(self, event: MouseEvent):
         ax = self.axes
@@ -58,10 +70,14 @@ class Axes(QWidget):
             # deal with something that should never happen
             scale_factor = 1
 
-        xlim_zoomed = [l*scale_factor + xfocus for l in xlim_delta]
-        ylim_zoomed = [l*scale_factor + yfocus for l in ylim_delta]
-        ax.set_xlim(xlim_zoomed)
-        ax.set_ylim(ylim_zoomed)
+        if 'ctrl' not in self.current_modifiers:
+            xlim_zoomed = [l*scale_factor + xfocus for l in xlim_delta]
+            ax.set_xlim(xlim_zoomed)
+
+        if 'shift' not in self.current_modifiers:
+            ylim_zoomed = [l*scale_factor + yfocus for l in ylim_delta]
+            ax.set_ylim(ylim_zoomed)
+
         self.draw()
 
     def draw(self):
