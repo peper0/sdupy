@@ -110,10 +110,11 @@ def reactive_finalizable(args_as_vars: Set[str]=set()):
     def wrapper(f):
         if inspect.isasyncgenfunction(f):
             factory = AsyncYieldingReactor
-        elif hasattr(f, '__call__'):
+        elif inspect.isgeneratorfunction(f):
             factory = YieldingReactor
         else:
-            raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(f)))
+            raise Exception("{} is neither a generator function nor an async generator function; didn't you forget "
+                            "using 'yield' inside?".format(repr(f)))
 
         def wrapped(*args, **kwargs):
             kwargs = update_kwargs_with_defaults(f, args, kwargs)  # handle vars in default args

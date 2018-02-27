@@ -1,9 +1,11 @@
+import logging
 import os
 from typing import Any, List, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 
 from sdupy.reactive import VarBase
 from sdupy.studioapp import gcmw
@@ -14,37 +16,76 @@ from .widgets import Plot
 kept_references = dict()  # Dict[str, Var]
 
 
-@reactive_finalizable()
-def display_image(widget_name: str, image: np.ndarray, use_bgr=True, **kwargs):
+def default_remove_plot(plot_res, axes: Axes):
+    if isinstance(plot_res, list) or isinstance(plot_res, tuple):
+        for i in plot_res:
+            default_remove_plot(i, axes)
+    else:
+        plot_res.remove()
+        pass
+
+
+class ReactiveAxes:
+    def __init__(self, axes: plt.Axes):
+        self.axes = axes
+
+    def reactive_call(self, func):
+        def bound_func(*args, **kwargs):
+            func(self.axes, *args, **kwargs)
+
+        self.reactive_call_bound(bound_func)
+
+    def __getattr__(self, func_name):
+        return self.reactive_call_bound(getattr(self.axes, func_name))
+
+    def reactive_call_bound(self, bound_func):
+        @reactive_finalizable()
+        def wrapped_bound_func(*args, remove_func = default_remove_plot, **kwargs):
+            logging.fatal('plotting %s', kwargs)
+            res = bound_func(*args, **kwargs)
+            figure = self.axes.get_figure()
+            assert figure is not None
+            canvas = figure.canvas
+            canvas.draw()
+            yield res
+
+            if res and remove_func:
+                remove_func(res, self.axes)
+                canvas.draw()
+
+        return wrapped_bound_func
+
+
+def reactive_axes(widget_name: str, main_window = None):
+    assert isinstance(widget_name, str)
+    main_window = main_window or gcmw()
+    plot_widget = main_window.obtain_widget(widget_name, Plot)
+    return ReactiveAxes(plot_widget.axes)
+
+
+@reactive
+def image_to_rgb(image: np.ndarray, is_bgr=True):
+    if is_bgr and len(image.shape) == 3:
+        if image.shape[2] == 3:
+            return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        elif image.shape[2] == 4:
+            return cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
+    return image
+
+
+@reactive
+def display_image(widget_name: str, image: np.ndarray, use_bgr=True, main_window = None, **kwargs):
     """
     :param widget_name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
     :param use_bgr: If the image has 3 components, treat them as Blue, Green, Red in this order (Red Green Blue
                     otherwise)
-    :param keep: Keep the image even when no reference to the returned object is kept. Only the last one is kept for
-                 each widget.
     :return:
     """
-    assert isinstance(widget_name, str)
-    plot = gcmw().obtain_widget(widget_name, Plot)
-    axes_image = None
-
-    if image is not None:
-        kwargs.setdefault('aspect', 'equal')
-        kwargs.setdefault('interpolation', 'nearest')
-        if use_bgr and len(image.shape) == 3:
-            if image.shape[2] == 3:
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            elif image.shape[2] == 4:
-                image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
-        axes_image = plot.axes.imshow(image, **kwargs)  # type: plt.image.AxesImage
-    plot.draw()
-    yield
-    os.write(1, b"removing\n")
-    if axes_image is not None:
-        axes_image.remove()
-        plot.draw()
-
+    kwargs.setdefault('aspect', 'equal')
+    kwargs.setdefault('interpolation', 'nearest')
+    return reactive_axes(widget_name=widget_name, main_window=main_window).imshow(image_to_rgb(image, use_bgr),
+                                                                                  **kwargs)
 
 imshow = display_image
 

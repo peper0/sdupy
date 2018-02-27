@@ -17,6 +17,10 @@ TODO:
 - zamykanie widgetów powinno (może) je wywalać z widgetów
 - tabelda do arrayów numpyowych
 
+= wykres
+- zapisywanie też skali: log/liniowa; stanu włączenia grida i co tam jeszcze idzie wyklikać
+- sprawdzić, czy jak zrobimy draw 10x w jednej funkcji, to czy wykona sie tylko raz
+
 = tabelka
 - zapis geometrii
 - ukrywanie/pokazywanie kolumn (+ zapis tego)
