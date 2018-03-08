@@ -6,8 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
-from . import widgets
-from .widgets.common.register import FactoryDesc
+from sdupy import FactoryDesc, widgets
 
 current_main_window = None  # type: MainWindow
 state_name = 'default'

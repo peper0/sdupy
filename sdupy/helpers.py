@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any, List, Tuple, Union
 
 import cv2
@@ -7,11 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from sdupy.reactive import VarBase
-from sdupy.studioapp import gcmw
-from sdupy.widgets import ComboBox, Slider, VarsTable
+from sdupy import gcmw
 from .reactive.decorators import reactive, reactive_finalizable
-from .widgets import Plot
+from .widgets import ComboBox, Plot, Slider, VarsTable
 
 kept_references = dict()  # Dict[str, Var]
 
