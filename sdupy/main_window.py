@@ -6,7 +6,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
-from sdupy import FactoryDesc, widgets
+from . import widgets
+from .widgets.common.register import FactoryDesc
 
 current_main_window = None  # type: MainWindow
 state_name = 'default'
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow):
         self.state_name = state_name
         self.setCentralWidget(None)
         self.setDockNestingEnabled(True)
+        self.setWindowTitle(state_name)
 
         self.widgets = {}  # type: Dict[str, WidgetInstance]
 
@@ -156,12 +158,13 @@ def gcmw() -> MainWindow:
     """
     Get current main window.
     """
+    global current_main_window
     if not current_main_window:
-        main_window(state_name)
+        make_main_window(state_name)
     return current_main_window
 
 
-def main_window(state_name_):
+def make_main_window(state_name_):
     global state_name
     global current_main_window
     state_name = state_name_
@@ -174,6 +177,6 @@ def main_window(state_name_):
         if current_main_window == main_window:
             current_main_window = None
 
-    main_window.close_callback = window_closed()
+    main_window.close_callback = window_closed
 
     return main_window

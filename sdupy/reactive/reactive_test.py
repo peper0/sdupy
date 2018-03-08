@@ -160,6 +160,32 @@ class AsyncReactiveWithYield(asynctest.TestCase):
         self.assertEqual(inside, 0)
 
 
+@reactive(args_fwd_none=['a', 'b'])
+def none_proof_sum(a, b):
+    return a + b
+
+
+class SimpleReactiveBypassed(asynctest.TestCase):
+    async def test_vals(self):
+        self.assertEqual(none_proof_sum(2, 5), 7)
+        self.assertIsNone(none_proof_sum(2, None))
+        self.assertIsNone(none_proof_sum(None, 5))
+
+    async def test_vars(self):
+        a = Var()
+        b = Var()
+        res = none_proof_sum(a, b)
+        await wait_for_var(res)
+        self.assertIsNone(res.data)
+        b.set(2)
+        await wait_for_var(res)
+        self.assertIsNone(res.data)
+        a.set(3)
+        await wait_for_var(res)
+        self.assertEqual(res.data, 5)
+
+
+@reactive
 async def appender(queue: asyncio.Queue):
     global inside
     inside += 1
@@ -177,6 +203,7 @@ class Task(asynctest.TestCase):
         global inside
         inside = 0
 
+    @asynctest.skip("reactive_trak is not maintained currently (but will be, hopefully)")
     async def test_a(self):
         queue = asyncio.Queue()
         res = await var_from_gen(appender(queue))

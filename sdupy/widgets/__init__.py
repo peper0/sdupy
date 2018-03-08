@@ -2,13 +2,13 @@ from typing import Any, List, Tuple, Union
 
 from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
-from sdupy.reactive import reactive
 from .common.qt_property_var import QtPropertyVar
 from .common.register import register_widget, registered_factories
 # from .console import make_console
 from .data_table import PandasTable, VarsTable
 from .plot import Plot
 from .slider import Slider
+from ..reactive import reactive
 
 
 @register_widget("selector")

@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from sdupy import gcmw
+from .main_window import gcmw
+from .reactive import VarBase
 from .reactive.decorators import reactive, reactive_finalizable
 from .widgets import ComboBox, Plot, Slider, VarsTable
 
@@ -37,7 +38,7 @@ class ReactiveAxes:
 
     def reactive_call_bound(self, bound_func):
         @reactive_finalizable()
-        def wrapped_bound_func(*args, remove_func = default_remove_plot, **kwargs):
+        def wrapped_bound_func(*args, remove_func=default_remove_plot, **kwargs):
             logging.fatal('plotting %s', kwargs)
             res = bound_func(*args, **kwargs)
             figure = self.axes.get_figure()
@@ -53,7 +54,7 @@ class ReactiveAxes:
         return wrapped_bound_func
 
 
-def reactive_axes(widget_name: str, main_window = None):
+def reactive_axes(widget_name: str, main_window=None):
     assert isinstance(widget_name, str)
     main_window = main_window or gcmw()
     plot_widget = main_window.obtain_widget(widget_name, Plot)
@@ -71,7 +72,7 @@ def image_to_rgb(image: np.ndarray, is_bgr=True):
 
 
 @reactive
-def display_image(widget_name: str, image: np.ndarray, use_bgr=True, main_window = None, **kwargs):
+def display_image(widget_name: str, image: np.ndarray, use_bgr=True, main_window=None, **kwargs):
     """
     :param widget_name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
@@ -83,6 +84,7 @@ def display_image(widget_name: str, image: np.ndarray, use_bgr=True, main_window
     kwargs.setdefault('interpolation', 'nearest')
     return reactive_axes(widget_name=widget_name, main_window=main_window).imshow(image_to_rgb(image, use_bgr),
                                                                                   **kwargs)
+
 
 imshow = display_image
 
@@ -117,5 +119,5 @@ def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, 
 
 def func():
     print(333)
-    a=4
+    a = 4
     print(a)
