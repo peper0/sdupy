@@ -1,3 +1,5 @@
+import logging
+
 from PyQt5.QtCore import QObject
 
 from sdupy.reactive import VarBase

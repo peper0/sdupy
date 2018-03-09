@@ -14,6 +14,10 @@ TODO:
 - Exception w Varach (jeśli w czasie odświeżania był Exception)
 - propagate_none - jesli ktorys z podanych parametrow jest none, to nie wolaj funkcji, tylko zwroc none (albo inną
 podaną wartość)
+- jak możnaby zrobić coś takiego, że jak nie widzimy Axes, to nie wykonujemy obliczeń dla niej (tzn. nie odświeżamy
+stanów)?
+- czarne litery na loggerze
+- zrobić, żeby eventy z QT miały priorytet (bardziej responsywne gui)
 
 = slider
 - kasowanie rysowaczy nie działa jak jest reactive w reactive

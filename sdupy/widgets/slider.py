@@ -41,16 +41,16 @@ class Slider(QWidget):
     @reactive
     def _set_vals(self, source_tup, value):
         source, = source_tup
-        if source == self._slider_val:
+        if source is self._slider_val:
             if self._uses_integer:
                 value /= self._slider_mult
             else:
                 value /= self._slider_mult
         if self._uses_integer():
             value = round(value)
-        if source != self._slider_val: self._slider_val.set(value * self._slider_mult)
-        if source != self._spin_val: self._spin_val.set(value)
-        if source != self.value: self.value.set(value)
+        if source is not self._slider_val: self._slider_val.set(value * self._slider_mult)
+        if source is not self._spin_val: self._spin_val.set(value)
+        if source is not self.value: self.value.set(value)
 
     def set_params(self, min, max, step=1):
         self._step = step

@@ -32,8 +32,12 @@ def make_rval(*args, **kwargs):
 
 # rename to "Observable"?
 class VarBase(VarInterface):
+    """
+    Var is not hashable since two hashable object must be equal or inequal during their lifetime (and it changes in
+    Var).
+    """
     def __init__(self):
-        self._observers = weakref.WeakSet()  # Iterable[Observer]
+        self._observers = weakref.WeakSet()  # type: Iterable[Observer]
         self.on_dispose = None
         self.disposed = False
         self._kept_references = []
@@ -80,7 +84,7 @@ class VarBase(VarInterface):
 
     def __repr__(self):
         # print()
-        return 'Var({})'.format(repr(self.data))
+        return '{}({})'.format(self.__class__.__name__, repr(self.data))
         # return "Var"
 
     def __str__(self):
@@ -137,6 +141,22 @@ class VarBase(VarInterface):
         return self_data + other
 
     @decorators.reactive(args_fwd_none=[0, 1])
+    def __sub__(self_data, other):
+        return self_data - other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __mul__(self_data, other):
+        return self_data * other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __truediv__(self_data, other):
+        return self_data / other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __floordiv__(self_data, other):
+        return self_data // other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
     def __radd__(self_data, other):
         return other + self_data
 
@@ -147,9 +167,8 @@ class VarBase(VarInterface):
     def __eq__(self_data, other):
         return self_data == other
 
-    @decorators.reactive(args_fwd_none=[0])
-    def __bool__(self_data):
-        return self_data.__bool__
+    def __bool__(self):
+        return self.data.__bool__()
 
         # TODO: rest of arithmetic and logic functions (http://www.diveintopython3.net/special-method-names.html)
 
@@ -167,6 +186,23 @@ class Var(VarBase):
         return self._data
 
 
+class HashableCallable:
+    def __init__(self, callable, id):
+        logging.fatal("created {}".format(id))
+        self.id = id
+        self.callable = callable
+
+    def __call__(self, *args, **kwargs):
+        logging.fatal("call")
+        return self.callable(*args, **kwargs)
+
+    def __eq__(self, other):
+        return isinstance(other, HashableCallable) and self.id == other.id
+
+    def __hash__(self):
+        return hash(self.id)
+
+
 class RVal(VarBase):
     def __init__(self):
         super().__init__()
@@ -178,7 +214,9 @@ class RVal(VarBase):
         if isinstance(data_or_target, VarBase):
             self._target_var = data_or_target
             self._data = None
-            self._updater = self.notify_observers
+            self._updater = HashableCallable(self.notify_observers, id(self))  # we must hold it since observable has
+            #  only weak ref to it's observers
+            logging.fatal("should create {}".format(id(self)))
             self._target_var.add_observer(self._updater)
         else:
             self._target_var = None
@@ -187,13 +225,13 @@ class RVal(VarBase):
         self.notify_observers()
 
     def get(self):
-        if self._target_var:
+        if self._target_var is not None:
             return self._target_var.get()
         else:
             return self._data
 
     def set(self, value):
-        if self._target_var:
+        if self._target_var is not None:
             return self._target_var.set(value)
         else:
             raise Exception("read-only variable")

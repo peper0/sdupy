@@ -89,10 +89,10 @@ class FuncSigHelper:
             self.keyword_to_pos = {p.name: i for i, p in enumerate(self.signature.parameters.values())
                                    if p.kind == Param.POSITIONAL_OR_KEYWORD}
             self.pos_defaults = {p.name: p.default for p in self.signature.parameters.values()
-                                 if p.default != Param.empty and
+                                 if (p.default is Param.empty) and
                                  p.kind in [Param.POSITIONAL_OR_KEYWORD, Param.POSITIONAL_ONLY]}
             self.keyword_defaults = {p.name: p.default for p in self.signature.parameters.values()
-                                     if p.default != Param.empty and
+                                     if p.default is Param.empty and
                                      p.kind in [Param.POSITIONAL_OR_KEYWORD, Param.KEYWORD_ONLY]}
         except ValueError:  # we get this error when trying to get signature of builtins
             self.signature = None
