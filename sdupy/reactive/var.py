@@ -26,6 +26,10 @@ def get_default_refresher():
     return refresher
 
 
+def make_rval(*args, **kwargs):
+    return RVal(*args, **kwargs)
+
+
 # rename to "Observable"?
 class VarBase(VarInterface):
     def __init__(self):
@@ -74,6 +78,81 @@ class VarBase(VarInterface):
     @abstractmethod
     def get(self):
         raise NotImplementedError()
+
+    def __repr__(self):
+        # print()
+        return 'Var({})'.format(repr(self.data))
+        # return "Var"
+
+    def __str__(self):
+        return str(self.data)
+        # return "Var"
+
+    def __bytes__(self):
+        return bytes(self.data)
+
+    def __format__(self, format_spec):
+        return format(self.data)
+        # return "Var"
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __getattr__(self_data, item):
+        return getattr(self_data, item)
+
+    # @decorators.reactive(args_fwd_none=[0, 1])
+    # def __setattr__(self_data, key, value):
+    #    return setattr(self_data, key, value)
+
+    def __delattr__(self, key):
+        return setattr(self.data, key)
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __call__(self_data, *args, **kwargs):
+        return self_data(*args, **kwargs)
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __len__(self_data):
+        return len(self_data)
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __contains__(self_data, item):
+        return item in self_data
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __getitem__(self_data, item):
+        return self_data[item]
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __setitem__(self_data, key, value):
+        self_data[key] = value
+
+    def __delitem__(self, key, value):
+        del self.data[key]
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __missing__(self_data, key):
+        return self_data.__missing__(key)
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __add__(self_data, other):
+        return self_data + other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __radd__(self_data, other):
+        return other + self_data
+
+    def __iadd__(self_data, other):
+        self_data += other
+
+    @decorators.reactive(args_fwd_none=[0, 1])
+    def __eq__(self_data, other):
+        return self_data == other
+
+    @decorators.reactive(args_fwd_none=[0])
+    def __bool__(self_data):
+        return self_data.__bool__
+
+        # TODO: rest of arithmetic and logic functions (http://www.diveintopython3.net/special-method-names.html)
 
 
 class Var(VarBase):

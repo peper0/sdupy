@@ -9,13 +9,13 @@ TODO:
 - object explorer - tree do oglądania stanu obiektu (używa dir() do pobrania dzieci); pluginy do ładnego printowania :)
 - implicit zależności reaktywnych funkcji - albo lecieć po argumentach domyślnych, albo parametr do reactive
 - memo do jednej zmiennej (jak jest tekstowa i długa)
+- Exception w Varach (jeśli w czasie odświeżania był Exception)
 
 = slider
-- intowy slider skacz po 2
 - kasowanie rysowaczy nie działa jak jest reactive w reactive
 - może jednak slider zamiast scroll bara skoro jest spinbox?
 - zamykanie widgetów powinno (może) je wywalać z widgetów
-- tabelda do arrayów numpyowych
+- tabelka do arrayów numpyowych (z możliwością wpisania wyrażenia, które ma się ewaluować do tabelki z max 2 wymiarami)
 
 = wykres
 - zapisywanie też skali: log/liniowa; stanu włączenia grida i co tam jeszcze idzie wyklikać
