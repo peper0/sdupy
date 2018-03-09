@@ -1,5 +1,7 @@
 TODO:
-- plik py zamiast notebooka i praca w konsoli
+- nie działają okienka guiowe wykresów przy pracy z konsoli
+- plugin
+- await z konsoli
 - drzewko kategorii do loggera z możliwością wyboru poziomu logowania dla każdego
 - ładowarka ramek do wyświetlenia imshowem
 - forwardowanie wywołań funkcji na "var" (var.__add__ i inne)
@@ -10,6 +12,8 @@ TODO:
 - implicit zależności reaktywnych funkcji - albo lecieć po argumentach domyślnych, albo parametr do reactive
 - memo do jednej zmiennej (jak jest tekstowa i długa)
 - Exception w Varach (jeśli w czasie odświeżania był Exception)
+- propagate_none - jesli ktorys z podanych parametrow jest none, to nie wolaj funkcji, tylko zwroc none (albo inną
+podaną wartość)
 
 = slider
 - kasowanie rysowaczy nie działa jak jest reactive w reactive

@@ -1,8 +1,11 @@
+import logging
+
 import matplotlib
 from PyQt5 import QtGui
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from math import exp, log
 from matplotlib.backend_bases import key_press_handler, MouseEvent
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
@@ -11,8 +14,8 @@ from .common.register import register_widget
 
 matplotlib.rcParams.update({'font.size': 6})
 
+MODIFIER_KEYS = set(['shift', 'control', 'alt'])
 
-MODIFIER_KEYS = set(['shift', 'ctrl', 'alt'])
 
 class Axes(QWidget):
     def __init__(self, parent):
@@ -40,6 +43,8 @@ class Axes(QWidget):
         self.axes.set_adjustable('datalim')  # use whole area when keeping aspect ratio of images
         self.resizeEvent(None)
 
+        self.setMinimumSize(200, 200)
+
     def on_key_press(self, event):
         if event.key in MODIFIER_KEYS:
             self.current_modifiers.add(event.key)
@@ -52,31 +57,33 @@ class Axes(QWidget):
         if event.key in MODIFIER_KEYS and event.key in self.current_modifiers:
             self.current_modifiers.remove(event.key)
 
+    @staticmethod
+    def get_scaled_lim(lim, focus, scale_factor, mode: str):
+        # Todo: use some generic method to support any scale
+        if mode == 'linear':
+            return [(l - focus) * scale_factor + focus for l in lim]
+        elif mode == 'log':
+            return [exp((log(l) - log(focus)) * scale_factor + log(focus)) for l in lim]
+        else:
+            logging.error("cannot zoom on '{}' scale".format(mode))
+
     def on_scroll(self, event: MouseEvent):
         ax = self.axes
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        xfocus = event.xdata # get event x location
-        yfocus = event.ydata # get event y location
-        xlim_delta = [l - xfocus for l in xlim]
-        ylim_delta = [l - yfocus for l in ylim]
 
         SCALE_PER_TICK = 1.3
         if event.button == 'up':
-            scale_factor = 1/SCALE_PER_TICK
+            scale_factor = 1 / SCALE_PER_TICK
         elif event.button == 'down':
             scale_factor = SCALE_PER_TICK
         else:
             # deal with something that should never happen
             scale_factor = 1
 
-        if 'ctrl' not in self.current_modifiers:
-            xlim_zoomed = [l*scale_factor + xfocus for l in xlim_delta]
-            ax.set_xlim(xlim_zoomed)
+        if 'control' not in self.current_modifiers:
+            ax.set_xlim(self.get_scaled_lim(ax.get_xlim(), event.xdata, scale_factor, ax.get_xscale()))
 
         if 'shift' not in self.current_modifiers:
-            ylim_zoomed = [l*scale_factor + yfocus for l in ylim_delta]
-            ax.set_ylim(ylim_zoomed)
+            ax.set_ylim(self.get_scaled_lim(ax.get_ylim(), event.ydata, scale_factor, ax.get_yscale()))
 
         self.draw()
 
@@ -97,8 +104,6 @@ class Axes(QWidget):
             self.axes.set_xlim(state['xlim'])
         if 'ylim' in state:
             self.axes.set_ylim(state['ylim'])
-
-
 
 
 @register_widget("matplotlib plot")

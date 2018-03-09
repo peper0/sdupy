@@ -180,3 +180,11 @@ def make_main_window(state_name_):
     main_window.close_callback = window_closed
 
     return main_window
+
+
+def start(state_name):
+    global current_main_window
+    window = MainWindow(state_name=state_name)
+    current_main_window = window
+    window.show()
+    return window

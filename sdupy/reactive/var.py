@@ -40,7 +40,6 @@ class VarBase(VarInterface):
 
     def __del__(self):
         if not self.disposed and self.on_dispose:
-            os.write(1, b"will dispose\n")
             get_default_refresher().schedule_call(self.on_dispose, self.on_dispose)
             # assert self.disposed, "Var.dispose was not called before destroying"
 

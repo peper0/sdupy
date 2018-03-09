@@ -54,7 +54,7 @@ class ReactiveAxes:
         return wrapped_bound_func
 
 
-def reactive_axes(widget_name: str, main_window=None):
+def reactive_axes(widget_name: str, main_window = None) -> plt.Axes:
     assert isinstance(widget_name, str)
     main_window = main_window or gcmw()
     plot_widget = main_window.obtain_widget(widget_name, Plot)
@@ -116,8 +116,3 @@ def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, 
         widget.combo.setCurrentIndex(0)
     return widget.data_var
 
-
-def func():
-    print(333)
-    a = 4
-    print(a)

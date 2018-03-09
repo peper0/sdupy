@@ -86,8 +86,11 @@ class VarsModel(QAbstractTableModel):
         if index.isValid():
             if index.row() < len(self.vars):
                 item = self.vars[index.row()]
-                converted_value = item.to_value(value)
-                item.var.set(converted_value)
+                try:
+                    converted_value = item.to_value(value)
+                    item.var.set(converted_value)
+                except:
+                    logging.exception('exception during setting var')
                 return True
         return super().setData(index, value, role)
 
