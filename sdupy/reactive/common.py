@@ -48,3 +48,7 @@ class VarInterface:
     @abstractmethod
     def get(self):
         raise NotImplementedError()
+
+    @abstractmethod
+    def exception(self):
+        raise NotImplementedError()

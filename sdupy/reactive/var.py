@@ -1,5 +1,4 @@
 import logging
-import os
 import weakref
 from abc import abstractmethod
 from typing import Any, Union
@@ -36,6 +35,7 @@ class VarBase(VarInterface):
     Var is not hashable since two hashable object must be equal or inequal during their lifetime (and it changes in
     Var).
     """
+
     def __init__(self):
         self._observers = weakref.WeakSet()  # type: Iterable[Observer]
         self.on_dispose = None
@@ -174,16 +174,28 @@ class VarBase(VarInterface):
 
 
 class Var(VarBase):
-    def __init__(self, data=None):
+    class NotInitialized:
+        pass
+
+    NOT_INITIALIZED = NotInitialized()
+
+    def __init__(self, data=NOT_INITIALIZED):
         super().__init__()
         self._data = data
+        self._exception = ValueError("not initialized") if data is self.NOT_INITIALIZED else None
 
     def set(self, value):
+        self._exception = None
         self._data = value
         self.notify_observers()
 
     def get(self):
+        if self._exception:
+            raise self._exception
         return self._data
+
+    def exception(self):
+        return self._exception
 
 
 class HashableCallable:
@@ -207,26 +219,54 @@ class RVal(VarBase):
     def __init__(self):
         super().__init__()
         self._data = None  # type: Union[VarBase, Any]
+        self._exception = ValueError("not provided")
         self._target_var = None
         self._updater = None
 
-    def provide(self, data_or_target):
-        if isinstance(data_or_target, VarBase):
+    def provide(self, data_or_target, exception=None):
+        if exception is not None:
+            assert data_or_target is None
+            self.provide_exception(exception)
+        elif isinstance(data_or_target, VarBase):
             self._target_var = data_or_target
+            self._exception = None
             self._data = None
             self._updater = HashableCallable(self.notify_observers, id(self))  # we must hold it since observable has
             #  only weak ref to it's observers
             logging.fatal("should create {}".format(id(self)))
             self._target_var.add_observer(self._updater)
         else:
-            self._target_var = None
             self._data = data_or_target
+            self._exception = None
+            self._target_var = None
             self._updater = None
         self.notify_observers()
+
+    def provide_exception(self, exception):
+        self._exception = exception
+        self._data = None
+        self._target_var = None
+        self.notify_observers()
+
+    def handle_exception(self):
+        var = self
+
+        class ExceptionHandler:
+            def __enter__(self):
+                pass
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if exc_val is not None:
+                    var.provide_exception(exc_val)
+                return True
+
+        return ExceptionHandler()
 
     def get(self):
         if self._target_var is not None:
             return self._target_var.get()
+        elif self._exception:
+            raise self._exception
         else:
             return self._data
 
@@ -235,6 +275,12 @@ class RVal(VarBase):
             return self._target_var.set(value)
         else:
             raise Exception("read-only variable")
+
+    def exception(self):
+        if self._target_var is not None:
+            return self._target_var.exception
+        else:
+            return self._exception
 
 
 decorators.var_factory = RVal

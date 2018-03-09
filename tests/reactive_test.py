@@ -1,11 +1,10 @@
 import asyncio
 import gc
-import weakref
 
 import asynctest
 
-from .decorators import reactive, reactive_finalizable, var_from_gen
-from .var import Var, VarBase, wait_for_var
+from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
+from sdupy.reactive.var import Var, VarBase, wait_for_var
 
 
 @reactive()
@@ -53,6 +52,15 @@ class SimpleReactive(asynctest.TestCase):
         await wait_for_var(res)
         self.assertEqual(res.data, 9)  # 6+3
 
+    async def test_exception_propagation(self):
+        a = Var(None)
+        b = Var()
+        res = my_sum(a=a, b=b)
+        await wait_for_var(res)
+        self.assertIsNotNone(res.exception())
+        with self.assertRaisesRegex(Exception, r'.*b.*'):
+            res.data
+
 
 @reactive()
 async def async_sum(a, b):
@@ -96,6 +104,15 @@ class SimpleReactiveAsync(asynctest.TestCase):
         await wait_for_var(res)
         self.assertEqual(res.data, 9)  # 6+3
 
+    async def test_exception_propagation(self):
+        a = Var(3)
+        b = Var()
+        res = await async_sum(a=a, b=b)
+        await wait_for_var(res)
+        self.assertIsNotNone(res.exception())
+        with self.assertRaisesRegex(Exception, r'.*b.*'):
+            res.data
+
 
 inside = 0
 
@@ -111,11 +128,22 @@ def sum_with_yield(a, b):
 
 
 class ReactiveWithYield(asynctest.TestCase):
+    async def setUp(self):
+        gc.collect()
+        await asyncio.sleep(0.01)
+        self.assertEqual(inside, 0)
+
+    async def tearDown(self):
+        gc.collect()
+        await asyncio.sleep(0.01)
+        self.assertEqual(inside, 0)
+
     async def test_a(self):
         b = Var(5)
         res = sum_with_yield(2, b=b)
         self.assertIsInstance(res, VarBase)
         self.assertEqual(res.data, 7)
+        gc.collect()
         self.assertEqual(inside, 1)
         b.set(1)
         print("w1")
@@ -125,14 +153,30 @@ class ReactiveWithYield(asynctest.TestCase):
         # await res.dispose()
         del b
         gc.collect()
-        weak_res = weakref.ref(res)
+        # weak_res = weakref.ref(res)
         # print(gc.get_referrers(res))
         del res
         gc.collect()
         await wait_for_var()
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.01)
         self.assertEqual(inside, 0)
         print("finished)")
+
+    async def test_exception_propagation(self):
+        b = Var()
+        res = sum_with_yield(2, b=b)  # type: sdupy.reactive.RVal
+        await wait_for_var(res)
+        gc.collect()
+        self.assertEqual(inside, 0)
+        self.assertIsNotNone(res.exception())
+        with self.assertRaisesRegex(Exception, r'.*b.*'):
+            res.data
+        b.set(5)
+        await wait_for_var(res)
+        gc.collect()
+        self.assertEqual(inside, 1)
+        self.assertIsNone(res.exception())
+        self.assertEqual(res.data, 7)
 
 
 @reactive_finalizable()
@@ -145,6 +189,16 @@ async def async_sum_with_yield(a, b):
 
 
 class AsyncReactiveWithYield(asynctest.TestCase):
+    async def setUp(self):
+        gc.collect()
+        await asyncio.sleep(0.01)
+        self.assertEqual(inside, 0)
+
+    async def tearDown(self):
+        gc.collect()
+        await asyncio.sleep(0.01)
+        self.assertEqual(inside, 0)
+
     async def test_a(self):
         b = Var(5)
         res = await async_sum_with_yield(2, b=b)
@@ -157,7 +211,21 @@ class AsyncReactiveWithYield(asynctest.TestCase):
         self.assertEqual(inside, 1)
         await res.dispose()
         del res
+
+    async def test_exception_propagation(self):
+        b = Var()
+        res = await async_sum_with_yield(2, b=b)  # type: sdupy.reactive.RVal
+        await wait_for_var(res)
         self.assertEqual(inside, 0)
+        self.assertIsNotNone(res.exception())
+        with self.assertRaisesRegex(Exception, r'.*b.*'):
+            res.data
+
+        b.set(5)
+        await wait_for_var(res)
+        # self.assertEqual(inside, 1)
+        # self.assertIsNone(res.exception())
+        # self.assertEqual(res.data, 7)
 
 
 @reactive(args_fwd_none=['a', 'b'])
@@ -172,8 +240,8 @@ class SimpleReactiveBypassed(asynctest.TestCase):
         self.assertIsNone(none_proof_sum(None, 5))
 
     async def test_vars(self):
-        a = Var()
-        b = Var()
+        a = Var(None)
+        b = Var(None)
         res = none_proof_sum(a, b)
         await wait_for_var(res)
         self.assertIsNone(res.data)

@@ -31,10 +31,13 @@ def rewrap_args(args, kwargs: dict, args_as_vars=set()):
             return var_factory(arg)
 
     def rewrap(key: Union[str, int], arg):
-        if key in args_as_vars:
-            return as_var(arg)
-        else:
-            return as_value(arg)
+        try:
+            if key in args_as_vars:
+                return as_var(arg)
+            else:
+                return as_value(arg)
+        except Exception as exception:
+            raise Exception("propagating exception from arg '{}'".format(key)) from exception
 
     args_rewrapped = [rewrap(num, arg) for num, arg in enumerate(args)]
     kwargs_rewrapped = {key: rewrap(key, arg) for key, arg in kwargs.items()}
@@ -215,7 +218,6 @@ class Binding:
         args_rewrapped, kwargs_rewrapped = rewrap_args(self.args, self.kwargs, args_as_vars=self.args_as_vars)
         if self.sig_helper.args_not_none(self.args_fwd_none, args_rewrapped, kwargs_rewrapped):
             return self.func(*args_rewrapped, **kwargs_rewrapped)
-        return None
 
 
 class ReactorBase:
@@ -237,7 +239,8 @@ class ReactorBase:
 
 class Reactor(ReactorBase):
     def update(self):
-        self._result_var_weak().provide(self._binding())
+        with self._result_var_weak().handle_exception():
+            self._result_var_weak().provide(self._binding())
 
     def build_result(self, var):
         self.update()
@@ -246,7 +249,8 @@ class Reactor(ReactorBase):
 
 class AsyncReactor(ReactorBase):
     async def update(self):
-        self._result_var_weak().provide(await self._binding())
+        with self._result_var_weak().handle_exception():
+            self._result_var_weak().provide(await self._binding())
 
     async def build_result(self, var):
         await self.update()
@@ -265,16 +269,18 @@ class YieldingReactor(ReactorBase):
         if self._iterator:
             with suppress(StopIteration):
                 next(self._iterator)
-                raise Exception("two yields in function %s")
-            logger.debug('deleting reactor %s', self)
+                raise Exception("two yields in function {}".format(self._binding.func))
+            logger.debug('deleting reactor')
             unfinished_iterators.remove(self._iterator)
             self._iterator = None
 
     def update(self):
         self.cleanup()
-        self._iterator = iter(self._binding())
-        unfinished_iterators.add(self._iterator)
-        self._result_var_weak().provide(next(self._iterator))
+        with self._result_var_weak().handle_exception():
+            self._iterator = iter(self._binding())
+            unfinished_iterators.add(self._iterator)
+            with suppress(StopIteration):  # it's acceptable that the iterator finishes here
+                self._result_var_weak().provide(next(self._iterator))
 
     def build_result(self, var):
         self.update()
@@ -293,12 +299,16 @@ class AsyncYieldingReactor(ReactorBase):
             with suppress(StopAsyncIteration):
                 await self._iterator.__anext__()
                 raise Exception("two yields in function %s")
+            unfinished_iterators.remove(self._iterator)
             self._iterator = None
 
     async def update(self):
         await self.cleanup()
-        self._iterator = self._binding().__aiter__()
-        self._result_var_weak().provide(await self._iterator.__anext__())
+        with self._result_var_weak().handle_exception():
+            self._iterator = self._binding().__aiter__()
+            unfinished_iterators.add(self._iterator)
+            with suppress(StopAsyncIteration):  # it's acceptable that the iterator finishes here
+                self._result_var_weak().provide(await self._iterator.__anext__())
 
     async def build_result(self, var):
         await self.update()
