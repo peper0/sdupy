@@ -9,9 +9,6 @@ from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 from . import widgets
 from .widgets.common.register import FactoryDesc
 
-current_main_window = None  # type: MainWindow
-state_name = 'default'
-
 logging.basicConfig(level=logging.INFO)
 
 
@@ -23,19 +20,20 @@ class WidgetInstance(NamedTuple):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, parent=None, state_name=''):
+    def __init__(self, parent=None, title=None, persistence_id=None):
         super().__init__(parent)
         # self.setCentralWidget(QTextEdit())
         # noinspection PyTypeChecker
-        self.state_name = state_name
+        self.persistence_id = persistence_id
         self.setCentralWidget(None)
         self.setDockNestingEnabled(True)
-        self.setWindowTitle(state_name)
+        self.setWindowTitle(title)
 
         self.widgets = {}  # type: Dict[str, WidgetInstance]
 
         self.file_menu = QMenu('&File', self)
-        self.file_menu.addAction('&Save layout', self.save_state_action, Qt.CTRL + Qt.Key_S)
+        a = self.file_menu.addAction('&Save layout', self.save_state_action, Qt.CTRL + Qt.Key_S)
+        a.setEnabled(bool(self.persistence_id))
         self.menuBar().addMenu(self.file_menu)
 
         self.add_menu = QMenu('&Add widget', self)
@@ -47,11 +45,12 @@ class MainWindow(QMainWindow):
         for factory_desc in widgets.registered_factories.values():
             self.add_factory_to_gui(factory_desc)
 
-        try:
-            with open("{}.state.json".format(state_name)) as f:
-                self.load_state(json.load(f))
-        except Exception:
-            logging.exception("exception during reading state file; ignoring")
+        if self.persistence_id:
+            try:
+                with open("{}.state.json".format(persistence_id)) as f:
+                    self.load_state(json.load(f))
+            except Exception:
+                logging.exception("exception during reading state file; ignoring")
 
     def add_factory_to_gui(self, factory_desc: FactoryDesc):
         def add_widget():
@@ -114,9 +113,11 @@ class MainWindow(QMainWindow):
             self.close_callback()
 
     def save_state_action(self):
-        state_as_json = json.dumps(self.dump_state())  # we do it before overwritting a file since there may be error
-        with open("{}.state.json".format(self.state_name), 'w') as f:
-            f.write(state_as_json)
+        if self.persistence_id:
+            state_as_json = json.dumps(
+                self.dump_state())  # we do it before overwritting a file since there may be error
+            with open("{}.state.json".format(self.persistence_id), 'w') as f:
+                f.write(state_as_json)
 
     def dump_state(self):
         widgets_state = []
@@ -152,39 +153,3 @@ class MainWindow(QMainWindow):
                         "ignoring exception during restoring widget from factory '{}".format(factory_name))
         if 'state' in state:
             self.restoreState(bytes.fromhex(state['state']))
-
-
-def gcmw() -> MainWindow:
-    """
-    Get current main window.
-    """
-    global current_main_window
-    if not current_main_window:
-        make_main_window(state_name)
-    return current_main_window
-
-
-def make_main_window(state_name_):
-    global state_name
-    global current_main_window
-    state_name = state_name_
-    main_window = MainWindow(state_name=state_name)
-    current_main_window = main_window
-    main_window.show()
-
-    def window_closed():
-        global current_main_window
-        if current_main_window == main_window:
-            current_main_window = None
-
-    main_window.close_callback = window_closed
-
-    return main_window
-
-
-def start(state_name):
-    global current_main_window
-    window = MainWindow(state_name=state_name)
-    current_main_window = window
-    window.show()
-    return window

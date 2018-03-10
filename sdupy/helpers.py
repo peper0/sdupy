@@ -4,17 +4,17 @@ from typing import Any, List, Tuple, Union
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 
-from .main_window import gcmw
+from sdupy import gcw
+from sdupy.windows import WindowSpec, window_for_spec
 from .reactive import VarBase
 from .reactive.decorators import reactive, reactive_finalizable
-from .widgets import ComboBox, Plot, Slider, VarsTable
+from .widgets import ComboBox, Figure, Slider, VarsTable
 
 kept_references = dict()  # Dict[str, Var]
 
 
-def default_remove_plot(plot_res, axes: Axes):
+def default_remove_plot(plot_res, axes: Figure):
     if isinstance(plot_res, list) or isinstance(plot_res, tuple):
         for i in plot_res:
             default_remove_plot(i, axes)
@@ -54,11 +54,16 @@ class ReactiveAxes:
         return wrapped_bound_func
 
 
-def reactive_axes(widget_name: str, main_window = None) -> plt.Axes:
-    assert isinstance(widget_name, str)
-    main_window = main_window or gcmw()
-    plot_widget = main_window.obtain_widget(widget_name, Plot)
-    return ReactiveAxes(plot_widget.axes)
+def widget(name: str, factory, window: WindowSpec = None):
+    assert isinstance(name, str)
+    return window_for_spec(window).obtain_widget(name, factory)
+
+
+def axes(name: str, window: WindowSpec = None) -> plt.Axes:  # cheating a bit with this plt.Axes...
+    return ReactiveAxes(widget(name, Figure, window=window).axes)
+
+
+reactive_axes = axes
 
 
 @reactive
@@ -91,28 +96,27 @@ imshow = display_image
 
 def clear_variables(widget_name: str):
     assert isinstance(widget_name, str)
-    vars_table = gcmw().obtain_widget(widget_name, VarsTable)
+    vars_table = gcw().obtain_widget(widget_name, VarsTable)
     vars_table.clear()
 
 
 def display_variable(widget_name: str, var_name: str, var: VarBase, to_value=None):
     assert isinstance(widget_name, str)
-    vars_table = gcmw().obtain_widget(widget_name, VarsTable)
+    vars_table = gcw().obtain_widget(widget_name, VarsTable)
     vars_table.insert_var(var_name, var, to_value=to_value)
 
 
 @reactive
 def input_value_from_range(widget_name: str, min, max, step) -> VarBase:
-    widget = gcmw().obtain_widget(widget_name, Slider)
+    widget = gcw().obtain_widget(widget_name, Slider)
     widget.set_params(min, max, step)
     return widget.value
 
 
 @reactive
 def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]]) -> VarBase:
-    widget = gcmw().obtain_widget(widget_name, ComboBox)
+    widget = gcw().obtain_widget(widget_name, ComboBox)
     widget.set_choices(choices)
     if widget.combo.currentIndex() < 0:
         widget.combo.setCurrentIndex(0)
     return widget.data_var
-

@@ -4,10 +4,10 @@ from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
 from .common.qt_property_var import QtPropertyVar
 from .common.register import register_widget, registered_factories
-# from .console import make_console
-from .data_table import PandasTable, VarsTable
-from .plot import Plot
+from .figure import Figure
 from .slider import Slider
+# from .console import make_console
+from .tables import PandasTable, VarsTable
 from ..reactive import reactive
 
 

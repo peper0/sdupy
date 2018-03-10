@@ -11,8 +11,8 @@ def run_loop_in_jupyter(kernel):
     """
     Can be used as cell magic (%gui sdupy) or installed with install()
     """
-    sys.stderr.write("starting 'sdupy' mainloop\n")
-    print('starting "sdupy" mainloop')
+    sys.stderr.write("starting 'sdupy' integration\n")
+    print('starting "sdupy" integration')
     init_quamash()
     loop = asyncio.get_event_loop()  # type: quamash.QEventLoop
 
@@ -24,11 +24,11 @@ def run_loop_in_jupyter(kernel):
     loop.call_soon(kernel_handler)
     with loop:  ## context manager calls .close() when loop completes, and releases all resources
         loop.run_forever()
-    print("sdupy mainloop finished")
+    print("sdupy integration finished")
 
 
 def install():
-    print("registering jupyter gui mainloop...")
+    print("registering jupyter gui integration...")
     get_ipython().run_line_magic('gui', 'sdupy')
     init_quamash()  # run_line_magic doesn't call run_loop_in_jupyter immediately and we don't want to loose any schedule to the loop
     test_asyncio()

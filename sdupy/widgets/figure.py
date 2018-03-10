@@ -1,12 +1,12 @@
 import logging
+from math import exp, log
 
 import matplotlib
+import matplotlib.figure
 from PyQt5 import QtGui
-import matplotlib.pyplot as plt
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
-from math import exp, log
-from matplotlib.backend_bases import key_press_handler, MouseEvent
+from matplotlib.backend_bases import MouseEvent, key_press_handler
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
 
@@ -17,13 +17,14 @@ matplotlib.rcParams.update({'font.size': 6})
 MODIFIER_KEYS = set(['shift', 'control', 'alt'])
 
 
-class Axes(QWidget):
+@register_widget("matplotlib figure")
+class Figure(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
 
-        self.figure = plt.figure()
+        self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setParent(self)
         self.canvas.setFocusPolicy(Qt.StrongFocus)
@@ -32,6 +33,18 @@ class Axes(QWidget):
 
         self.mpl_toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.mpl_toolbar)
+
+        def sizeHint():
+            size = super(NavigationToolbar, self.mpl_toolbar).sizeHint()
+            return size
+
+        self.mpl_toolbar.sizeHint = sizeHint
+        self.mpl_toolbar.layout().setContentsMargins(0, 0, 0, 0)
+        self.mpl_toolbar.setIconSize(QSize(16, 16))
+        self.mpl_toolbar.layout().setSpacing(2)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        # self.mpl_toolbar.setHeight(20)
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('scroll_event', self.on_scroll)
         self.canvas.mpl_connect('key_release_event', self.on_key_release)
@@ -104,8 +117,3 @@ class Axes(QWidget):
             self.axes.set_xlim(state['xlim'])
         if 'ylim' in state:
             self.axes.set_ylim(state['ylim'])
-
-
-@register_widget("matplotlib plot")
-class Plot(Axes):
-    pass

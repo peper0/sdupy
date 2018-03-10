@@ -1,23 +1,18 @@
 TODO:
-- nie działają okienka guiowe wykresów przy pracy z konsoli
 - plugin
 - await z konsoli
-- drzewko kategorii do loggera z możliwością wyboru poziomu logowania dla każdego
-- ładowarka ramek do wyświetlenia imshowem
-- forwardowanie wywołań funkcji na "var" (var.__add__ i inne)
 - ujednolicić wiązanie var z kontrolkami
-- obsługa zamykania okienka i otwierania go jeszcze raz za pomocą "start"
 - persistent do imshow (i trzymamy wtedy jeden updater per okienko)
 - object explorer - tree do oglądania stanu obiektu (używa dir() do pobrania dzieci); pluginy do ładnego printowania :)
-- implicit zależności reaktywnych funkcji - albo lecieć po argumentach domyślnych, albo parametr do reactive
 - memo do jednej zmiennej (jak jest tekstowa i długa)
-- Exception w Varach (jeśli w czasie odświeżania był Exception)
-- propagate_none - jesli ktorys z podanych parametrow jest none, to nie wolaj funkcji, tylko zwroc none (albo inną
-podaną wartość)
 - jak możnaby zrobić coś takiego, że jak nie widzimy Axes, to nie wykonujemy obliczeń dla niej (tzn. nie odświeżamy
-stanów)?
-- czarne litery na loggerze
+stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować notify observers (póki co i tak propagujemy do końca nie patrząc na to czy coś się faktycznie zmieniło)
 - zrobić, żeby eventy z QT miały priorytet (bardziej responsywne gui)
+- doc w restructured textcie i przykłady w pydoc
+
+= logger
+- drzewko kategorii do loggera z możliwością wyboru poziomu logowania dla każdego
+- czarne litery na loggerze
 
 = slider
 - kasowanie rysowaczy nie działa jak jest reactive w reactive
@@ -27,7 +22,8 @@ stanów)?
 
 = wykres
 - zapisywanie też skali: log/liniowa; stanu włączenia grida i co tam jeszcze idzie wyklikać
-- sprawdzić, czy jak zrobimy draw 10x w jednej funkcji, to czy wykona sie tylko raz
+- sprawdzić, czy jak zrobimy canvas.draw 10x w jednej funkcji, to czy wykona sie tylko raz
+- pełnojajeczny backend do matplotliba
 
 = tabelka
 - zapis geometrii
@@ -38,11 +34,6 @@ stanów)?
 
 
 # rekurencyjne Vary:
-## proponowane rozwiązanie
-- getattr implementujemy jako reactive(getattr)(self, attr). Dzięki temu podłączymy się jako obserwator do selfa. Zwrócona wartość będzie Varem, który zawiera albo te dane co dany atrybut (jeśli jest polem) albo "bound method".
-- __call__ jest reaktywnym forwarderem
-- pobranie atrybutu wywołuje zreaktywizowaną wersję takiego atrybutu w trzymanym obiekcie (reactive(getattr(self, attr)
-- jesli tym atrybutem jest funkcja
 
 
 ## atrybuty
