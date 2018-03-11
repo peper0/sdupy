@@ -22,7 +22,6 @@ stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować not
 
 = wykres
 - zapisywanie też skali: log/liniowa; stanu włączenia grida i co tam jeszcze idzie wyklikać
-- sprawdzić, czy jak zrobimy canvas.draw 10x w jednej funkcji, to czy wykona sie tylko raz
 - pełnojajeczny backend do matplotliba
 
 = tabelka

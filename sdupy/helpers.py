@@ -44,12 +44,12 @@ class ReactiveAxes:
             figure = self.axes.get_figure()
             assert figure is not None
             canvas = figure.canvas
-            canvas.draw()
+            canvas.draw_idle()
             yield res
 
             if res and remove_func:
                 remove_func(res, self.axes)
-                canvas.draw()
+                canvas.draw_idle()
 
         return wrapped_bound_func
 
