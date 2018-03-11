@@ -21,7 +21,6 @@ stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować not
 - tabelka do arrayów numpyowych (z możliwością wpisania wyrażenia, które ma się ewaluować do tabelki z max 2 wymiarami)
 
 = wykres
-- zapisywanie też skali: log/liniowa; stanu włączenia grida i co tam jeszcze idzie wyklikać
 - pełnojajeczny backend do matplotliba
 
 = tabelka

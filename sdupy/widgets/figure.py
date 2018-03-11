@@ -6,6 +6,7 @@ import matplotlib.figure
 from PyQt5 import QtGui
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from matplotlib.axis import Axis
 from matplotlib.backend_bases import MouseEvent, key_press_handler
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
     NavigationToolbar2QT as NavigationToolbar
@@ -106,10 +107,35 @@ class Figure(QWidget):
     def resizeEvent(self, a0: QtGui.QResizeEvent):
         self.figure.tight_layout(pad=0.5)
 
+    @staticmethod
+    def dump_axis_state(axis: Axis):
+        state = dict()
+        if axis.minorTicks and axis.minorTicks:
+            major = axis.majorTicks[0].gridOn
+            minor = axis.minorTicks[0].gridOn
+            if major or minor:
+                state['grid'] = dict(
+                    which='both' if major and minor else 'major' if major else 'minor'
+                )
+            else:
+                state['grid'] = None
+        return state
+
+    @staticmethod
+    def load_axis_state(axis: Axis, state: dict):
+        if state['grid']:
+            axis.grid(True, **state['grid'])
+        else:
+            axis.grid(False)
+
     def dump_state(self):
         return dict(
             xlim=self.axes.get_xlim(),
-            ylim=self.axes.get_ylim()
+            ylim=self.axes.get_ylim(),
+            xscale=self.axes.get_xscale(),
+            yscale=self.axes.get_yscale(),
+            x_axis=self.dump_axis_state(self.axes.get_xaxis()),
+            y_axis=self.dump_axis_state(self.axes.get_yaxis()),
         )
 
     def load_state(self, state: dict):
@@ -117,3 +143,11 @@ class Figure(QWidget):
             self.axes.set_xlim(state['xlim'])
         if 'ylim' in state:
             self.axes.set_ylim(state['ylim'])
+        if 'xscale' in state:
+            self.axes.set_xscale(state['xscale'])
+        if 'yscale' in state:
+            self.axes.set_yscale(state['yscale'])
+        if 'x_axis' in state:
+            self.load_axis_state(self.axes.get_xaxis(), state['x_axis'])
+        if 'y_axis' in state:
+            self.load_axis_state(self.axes.get_yaxis(), state['y_axis'])
