@@ -30,6 +30,16 @@ stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować not
 - sortowanie?
 - dokładanie kolumn będących funkcjami pozostałych?
 
+= hierarhia varów:
+== interfejsy:
+- Observable: umożliwia podłączenie observerów, jest bazą dla customowych obiektów obserwowalnych (nie wiem czy potrzebne)
+- ObservableVal/ObservableWrapper/ObservableBox: dziedziczy po Observable, umożliwia pobranie surowej wartości, forwarduje metody do surowej
+- ObservalbeSettalbeVal: ObservableVal, który ma też "set"
+== implementacje
+- ProvidedVal
+- ProvidedOrForwardedVal
+- ProvidedOrForwardedSetableVal
+- Var: implementacja ObservableVal, głównie dla typów niemodyfikowalnych
 
 # rekurencyjne Vary:
 

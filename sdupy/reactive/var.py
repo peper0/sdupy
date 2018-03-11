@@ -29,6 +29,10 @@ def make_rval(*args, **kwargs):
     return RVal(*args, **kwargs)
 
 
+class ObservableData():
+    pass
+
+
 # rename to "Observable"?
 class VarBase(VarInterface):
     """
@@ -41,6 +45,7 @@ class VarBase(VarInterface):
         self.on_dispose = None
         self.disposed = False
         self._kept_references = []
+        self.OBS = ObservableData()  # FIXME: put everything here
 
     def __del__(self):
         if not self.disposed and self.on_dispose:
@@ -84,7 +89,10 @@ class VarBase(VarInterface):
 
     def __repr__(self):
         # print()
-        return '{}({})'.format(self.__class__.__name__, repr(self.data))
+        if self.exception():
+            return '{}(exception={})'.format(self.__class__.__name__, repr(self.exception()))
+        else:
+            return '{}({})'.format(self.__class__.__name__, repr(self.data))
         # return "Var"
 
     def __str__(self):
@@ -173,6 +181,9 @@ class VarBase(VarInterface):
         # TODO: rest of arithmetic and logic functions (http://www.diveintopython3.net/special-method-names.html)
 
 
+Observable = VarBase
+
+
 class Var(VarBase):
     class NotInitialized:
         pass
@@ -224,6 +235,7 @@ class RVal(VarBase):
         self._updater = None
 
     def provide(self, data_or_target, exception=None):
+        assert data_or_target is not self
         if exception is not None:
             assert data_or_target is None
             self.provide_exception(exception)

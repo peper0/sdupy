@@ -4,7 +4,7 @@ import gc
 import asynctest
 
 from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
-from sdupy.reactive.var import Var, VarBase, wait_for_var
+from sdupy.reactive.var import Observable, Var, VarBase, wait_for_var
 
 
 @reactive()
@@ -158,7 +158,7 @@ class ReactiveWithYield(asynctest.TestCase):
         del res
         gc.collect()
         await wait_for_var()
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.5)
         self.assertEqual(inside, 0)
         print("finished)")
 
@@ -253,6 +253,70 @@ class SimpleReactiveBypassed(asynctest.TestCase):
         self.assertEqual(res.data, 5)
 
 
+called_times = 0
+some_observable = Observable()
+
+
+@reactive(other_deps=[some_observable])
+def inc_called_times(a):
+    global called_times
+    called_times += 1
+    return a
+
+
+class OtherDeps(asynctest.TestCase):
+    async def test_vars(self):
+        global called_times
+        called_times = 0
+        a = Var(None)
+        res = inc_called_times(a)
+        await wait_for_var(res)
+        self.assertEqual(called_times, 1)
+
+        a.set(55)
+        await wait_for_var(res)
+        await asyncio.sleep(0.1)
+        self.assertEqual(called_times, 2)
+
+        some_observable.notify_observers()
+        await wait_for_var(res)
+        await asyncio.sleep(1)
+        self.assertEqual(called_times, 3)
+
+        some_observable.notify_observers()
+        await wait_for_var(res)
+        await asyncio.sleep(1)
+        self.assertEqual(called_times, 4)
+
+
+@reactive(dep_only_args=['ignored_arg'])
+def inc_called_times2(a):
+    global called_times2
+    called_times2 += 1
+    return a
+
+
+class DepOnlyArgs(asynctest.TestCase):
+    async def test_vars(self):
+        global called_times2
+        called_times2 = 0
+        a = Var(55)
+        res = inc_called_times2(a, ignored_arg=some_observable)
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        self.assertEqual(res, 55)
+
+        a.set(10)
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 2)
+        self.assertEqual(res, 10)
+
+        some_observable.notify_observers()
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 3)
+        self.assertEqual(res, 10)
+
+
 @reactive
 async def appender(queue: asyncio.Queue):
     global inside
@@ -271,7 +335,7 @@ class Task(asynctest.TestCase):
         global inside
         inside = 0
 
-    @asynctest.skip("reactive_trak is not maintained currently (but will be, hopefully)")
+    @asynctest.skip("reactive_task is not maintained currently (but will be, hopefully)")
     async def test_a(self):
         queue = asyncio.Queue()
         res = await var_from_gen(appender(queue))

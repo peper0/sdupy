@@ -4,7 +4,8 @@ import logging
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterator, Set, Union, overload
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterable, Iterator, Set, Union, \
+    overload
 
 from .common import VarInterface, ensure_coro_func
 
@@ -17,7 +18,7 @@ def args_need_reaction(args: tuple, kwargs: dict):
     return any((isinstance(arg, VarInterface) for arg in args + tuple(kwargs.values())))
 
 
-def rewrap_args(args, kwargs: dict, args_as_vars=set()):
+def rewrap_args(args, kwargs: dict, args_as_vars=set(), ignore_args=set()):
     def as_value(arg):
         if isinstance(arg, VarInterface):
             return arg.data
@@ -40,7 +41,7 @@ def rewrap_args(args, kwargs: dict, args_as_vars=set()):
             raise Exception("propagating exception from arg '{}'".format(key)) from exception
 
     args_rewrapped = [rewrap(num, arg) for num, arg in enumerate(args)]
-    kwargs_rewrapped = {key: rewrap(key, arg) for key, arg in kwargs.items()}
+    kwargs_rewrapped = {key: rewrap(key, arg) for key, arg in kwargs.items() if key not in ignore_args}
     return args_rewrapped, kwargs_rewrapped
 
 
@@ -49,11 +50,13 @@ def maybe_observe(arg: Union[VarInterface, Any], update):
         return arg.add_observer(update)
 
 
-def observe_many(args, kwargs, update):
+def observe_many(args, kwargs, other_observables, update):
     for arg in args:
         maybe_observe(arg, update)
     for k, arg, in kwargs.items():
         maybe_observe(arg, update)
+    for observable in other_observables:
+        observable.add_observer(update)
 
 
 CoroFunction = Callable[[], Coroutine]
@@ -123,11 +126,19 @@ class FuncSigHelper:
     def args_not_none(self, args_to_check, args, kwargs):
         return all(self.get_arg(arg, args, kwargs) is not None for arg in args_to_check)
 
+    def remove_vars(self, args_to_remove, args, kwargs):
+        for arg in args_to_remove:
+            if arg in kwargs:
+                del kwargs[args]
 
-def reactive(args_as_vars=set(), args_fwd_none=[]):
+
+def reactive(args_as_vars=set(), args_fwd_none=[], other_deps=[], dep_only_args=[]):
     if callable(args_as_vars):
         # a shortcut that allows simple @reactive instead of @reactive()
         return reactive()(args_as_vars)
+
+    args_as_vars = set(args_as_vars)
+    dep_only_args = set(dep_only_args)
 
     def wrapper(f):
         if asyncio.iscoroutinefunction(f):
@@ -147,9 +158,9 @@ def reactive(args_as_vars=set(), args_fwd_none=[]):
 
             if args_need_reaction(args, kwargs):
                 binding = Binding(f, sig_helper=sig_helper, args_as_vars=args_as_vars, args_fwd_none=args_fwd_none,
-                                  args=args, kwargs=kwargs)
+                                  dep_only_args=dep_only_args, args=args, kwargs=kwargs)
                 var = var_factory()
-                return factory(var, binding).build_result(var)
+                return factory(var, binding, other_deps).build_result(var)
             else:
                 return f(*args, **kwargs) if sig_helper.args_not_none(args_fwd_none, args, kwargs) else None
 
@@ -158,7 +169,11 @@ def reactive(args_as_vars=set(), args_fwd_none=[]):
     return wrapper
 
 
-def reactive_finalizable(args_as_vars: Set[str] = set(), args_fwd_none=set()):
+def reactive_finalizable(args_as_vars: Set[str] = set(), args_fwd_none=[], other_deps=[], dep_only_args=[]):
+    if callable(args_as_vars):
+        # a shortcut that allows simple @reactive_finalizable instead of @reactive_finalizable()
+        return reactive_finalizable()(args_as_vars)
+
     def wrapper(f):
         if inspect.isasyncgenfunction(f):
             factory = AsyncYieldingReactor
@@ -173,16 +188,16 @@ def reactive_finalizable(args_as_vars: Set[str] = set(), args_fwd_none=set()):
         def wrapped(*args, **kwargs):
             kwargs = update_kwargs_with_defaults(f, args, kwargs)  # handle vars in default args
             binding = Binding(f, sig_helper=sig_helper, args_as_vars=args_as_vars, args_fwd_none=args_fwd_none,
-                              args=args, kwargs=kwargs)
+                              dep_only_args=dep_only_args, args=args, kwargs=kwargs)
             var = var_factory()
-            return factory(var, binding).build_result(var)
+            return factory(var, binding, other_deps).build_result(var)
 
         return wrapped
 
     return wrapper
 
 
-def reactive_task(args_as_vars=set()):
+def reactive_task(args_as_vars=set(), other_deps=[]):
     def wrapper(f):
         if not (asyncio.iscoroutinefunction(f) or inspect.isasyncgenfunction(f)):
             raise Exception("{} is not a coroutine function (async def...)".format(repr(f)))
@@ -190,7 +205,7 @@ def reactive_task(args_as_vars=set()):
         def wrapped(*args, **kwargs):
             binding = Binding(f, args_as_vars, args, kwargs)
             var = var_factory()
-            TaskReactor(var, binding).build_result(var)
+            TaskReactor(var, binding, other_deps).build_result(var)
             return var
 
         return wrapped
@@ -206,7 +221,8 @@ async def var_from_gen(async_gen: AsyncGenerator):
 
 
 class Binding:
-    def __init__(self, func, sig_helper: FuncSigHelper, args_as_vars, args_fwd_none, args, kwargs):
+    def __init__(self, func, sig_helper: FuncSigHelper, args_as_vars, args_fwd_none, dep_only_args, args, kwargs):
+        self.dep_only_args = dep_only_args
         self.func = func  # type: Callable[Any, Union[function, CoroFunction, Generator, AsyncGenerator]]
         self.args_fwd_none = args_fwd_none
         self.args_as_vars = args_as_vars
@@ -215,18 +231,19 @@ class Binding:
         self.sig_helper = sig_helper
 
     def __call__(self):
-        args_rewrapped, kwargs_rewrapped = rewrap_args(self.args, self.kwargs, args_as_vars=self.args_as_vars)
+        args_rewrapped, kwargs_rewrapped = rewrap_args(self.args, self.kwargs, args_as_vars=self.args_as_vars,
+                                                       ignore_args=self.dep_only_args)
         if self.sig_helper.args_not_none(self.args_fwd_none, args_rewrapped, kwargs_rewrapped):
             return self.func(*args_rewrapped, **kwargs_rewrapped)
 
 
 class ReactorBase:
-    def __init__(self, var: VarInterface, binding: Binding):
+    def __init__(self, var: VarInterface, binding: Binding, other_deps: Iterable):
         self._binding = binding
         self._result_var_weak = weakref.ref(var)
         update = self.update
         var.keep_reference(update)  # keep reference as long as "var" exists
-        observe_many(self._binding.args, self._binding.kwargs, update)
+        observe_many(self._binding.args, self._binding.kwargs, other_deps, update)
 
     @abstractmethod
     def update(self):
@@ -261,8 +278,8 @@ unfinished_iterators = set()
 
 
 class YieldingReactor(ReactorBase):
-    def __init__(self, var, binding: Binding):
-        super().__init__(var, binding)
+    def __init__(self, var, binding: Binding, other_deps):
+        super().__init__(var, binding, other_deps)
         self._iterator = None  # type: Iterator
 
     def cleanup(self):
@@ -290,8 +307,8 @@ class YieldingReactor(ReactorBase):
 
 
 class AsyncYieldingReactor(ReactorBase):
-    def __init__(self, var, binding: Binding):
-        super().__init__(var, binding)
+    def __init__(self, var, binding: Binding, other_deps):
+        super().__init__(var, binding, other_deps)
         self._iterator = None  # type: AsyncIterator
 
     async def cleanup(self):
