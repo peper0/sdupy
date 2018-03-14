@@ -88,7 +88,7 @@ class Axes(QWidget):
         self.draw()
 
     def draw(self):
-        self.canvas.draw()
+        self.canvas.draw_idle()
 
     def resizeEvent(self, a0: QtGui.QResizeEvent):
         self.figure.tight_layout(pad=0.5)
