@@ -1,4 +1,8 @@
 TODO:
+- obsługa błędów przy pierwszym wywołaniu (ignorować tylko błędy z argumentów)
+- add_observer: observer->callback, dodać "id", dodać owner
+- funkcje pobieraki: raw(), observable(), inner()
+
 - plugin
 - await z konsoli
 - ujednolicić wiązanie var z kontrolkami
@@ -31,15 +35,34 @@ stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować not
 - dokładanie kolumn będących funkcjami pozostałych?
 
 = hierarhia varów:
-== interfejsy:
-- Observable: umożliwia podłączenie observerów, jest bazą dla customowych obiektów obserwowalnych (nie wiem czy potrzebne)
-- ObservableVal/ObservableWrapper/ObservableBox: dziedziczy po Observable, umożliwia pobranie surowej wartości, forwarduje metody do surowej
-- ObservalbeSettalbeVal: ObservableVal, który ma też "set"
-== implementacje
-- ProvidedVal
-- ProvidedOrForwardedVal
-- ProvidedOrForwardedSetableVal
-- Var: implementacja ObservableVal, głównie dla typów niemodyfikowalnych
+- Observable: ma pole OBS typu Notifier lub pochodnego (tylko getowalne)
+- Wrapper(Observable): forwarduje wszystkie wywołania (wraz z funkcjami wewn.) do OBS.raw
+- <Custom>(Wrapper): specjalne forwardery dla różnych metod
+- ?AutoWrapper(Observable)
+
+- Notifier: add_observer, notify_observers, keep_reference?, dispose (z implementacją)
+- Value(Notifier): property raw, property exception (interfejs)
+- SelfContainedValue(Value): get zwraca to co ustawił set
+- ProvidedValue(Value): value dostarczone przez osobny interfejs
+- CallbackValue(Value): value liczone callbackiem przy każdym pobraniu, być może cacheowane
+- CallResult(Value):
+
+== użycie, działanie, uwagi
+- pole OBS można przepiąć na inny obiekt, ale trzeba zadbać o przepiecie observerów
+- var(x) zwraca Wrapper z SelfContainedValue (a może jakieś hooki zależne od typu trzymanego obiektu)
+- reactive wypakowuje Observable, które mają OBS.raw, a podłącza się do wszystkich Observable
+- qt_property(obj, prop) zwraca Wrapper z jakimś sensownym Value
+
+
+== dekoratory
+- konstrukcja dekoratora: argumenty -> dekorator
+- wywołanie dekoratora: funkcja -> udekorowana funkcja
+- zawołanie dekorowanej funkcji: args, kwargs -> Binding + call
+- update
+
+- dekorator: bierze argumenty do konstruktora,
+
+-
 
 # rekurencyjne Vary:
 

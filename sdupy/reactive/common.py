@@ -13,8 +13,10 @@ def ensure_coro_func(f):
         return async_f
 
 
-CoroutineFunction = Callable[[], Coroutine]
-Observer = Union[Callable[[], None], CoroutineFunction]
+CoroutineFunction = Callable[..., Coroutine]
+
+MaybeAsyncFunction = Union[Callable, CoroutineFunction]
+Observer = Union[Callable[[], None], Callable[[], Coroutine]]
 
 
 class VarInterface:

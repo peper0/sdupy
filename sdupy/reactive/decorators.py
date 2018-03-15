@@ -4,7 +4,7 @@ import logging
 import weakref
 from abc import abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterable, Iterator, Set, Union, \
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Generator, Iterable, Iterator, Set, Union, \
     overload
 
 from .common import VarInterface, ensure_coro_func
@@ -57,9 +57,6 @@ def observe_many(args, kwargs, other_observables, update):
         maybe_observe(arg, update)
     for observable in other_observables:
         observable.add_observer(update)
-
-
-CoroFunction = Callable[[], Coroutine]
 
 
 @overload

@@ -4,25 +4,9 @@ from abc import abstractmethod
 from typing import Any, Union
 
 from . import decorators
-from .async_refresher import AsyncRefresher
 from .common import Observer, VarInterface
 
 logger = logging.getLogger('reactive')
-
-refresher = None
-
-
-async def wait_for_var(var=None):
-    # fixme: waiting only for certain level (if var is not None)
-    await refresher.task
-
-
-def get_default_refresher():
-    global refresher
-    if not refresher:
-        refresher = AsyncRefresher()
-
-    return refresher
 
 
 def make_rval(*args, **kwargs):

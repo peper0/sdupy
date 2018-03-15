@@ -3,6 +3,8 @@ import logging
 from contextlib import suppress
 from typing import Any, Callable, NamedTuple
 
+from sdupy.reactive.common import Observer
+
 logger = logging.getLogger('refresher')
 
 
@@ -35,8 +37,10 @@ class AsyncRefresher:
             logger.exception('refresh task finished with exception, rethrowing')
             raise e
 
-    def schedule_call(self, hash, func: Callable):
-        t = QueueItem(1, hash, func)
+    def schedule_call(self, func: Observer, id, priority):
+        if priority is None:
+            priority = 999999
+        t = QueueItem(priority, id, func)
         self.queue.put_nowait(t)
         self.maybe_start_task()
 
@@ -59,5 +63,25 @@ class AsyncRefresher:
                         await f()
                     elif hasattr(f, '__call__'):
                         f()
+                    else:
+                        raise Exception("observer is neither a callable nor a coroutinefunction")
                 except Exception as e:
-                    logger.exception('exception when notifying observer (ignoring)')
+                    logger.exception('ignoring exception when in notifying observer {}'.format(update.func))
+
+
+refresher = None
+
+
+def get_default_refresher():
+    global refresher
+    if not refresher:
+        refresher = AsyncRefresher()
+
+    return refresher
+
+
+async def wait_for_var(var=None):
+    # fixme: waiting only for certain level (if var is not None)
+    task = get_default_refresher().task
+    if task:
+        await task
