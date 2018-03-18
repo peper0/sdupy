@@ -3,14 +3,14 @@ import logging
 from contextlib import suppress
 from typing import Any, Callable, NamedTuple
 
-from sdupy.reactive.common import Observer
+from sdupy.reactive.common import NotifyFunc
 
 logger = logging.getLogger('refresher')
 
 
 class QueueItem(NamedTuple):
     priority: int
-    id: Any
+    id: Any  # FIXME: remove id (callable MUST be hashable, we use wrapper if it isn't)
     func: Callable
 
     def __lt__(self, other):
@@ -37,7 +37,7 @@ class AsyncRefresher:
             logger.exception('refresh task finished with exception, rethrowing')
             raise e
 
-    def schedule_call(self, func: Observer, id, priority):
+    def schedule_call(self, func: NotifyFunc, id, priority):
         if priority is None:
             priority = 999999
         t = QueueItem(priority, id, func)
@@ -59,12 +59,9 @@ class AsyncRefresher:
 
                 try:
                     f = update.func
-                    if asyncio.iscoroutinefunction(f):
-                        await f()
-                    elif hasattr(f, '__call__'):
-                        f()
-                    else:
-                        raise Exception("observer is neither a callable nor a coroutinefunction")
+                    res = f()
+                    if asyncio.iscoroutine(res):
+                        await res
                 except Exception as e:
                     logger.exception('ignoring exception when in notifying observer {}'.format(update.func))
 

@@ -16,41 +16,47 @@ def ensure_coro_func(f):
 CoroutineFunction = Callable[..., Coroutine]
 
 MaybeAsyncFunction = Union[Callable, CoroutineFunction]
-Observer = Union[Callable[[], None], Callable[[], Coroutine]]
+NotifyFunc = Union[Callable[[], None], Callable[[], Coroutine]]
 
 
-class VarInterface:
+class WrapperInterface:
+    @property
     @abstractmethod
-    def notify_observers(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def add_observer(self, observer: Observer):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def keep_reference(self, o):
+    def __notifier__(self):
         """
-        Keeps a reference to `o` for own Var instance lifetime.
+        A notifier, that will notify whenever a reactive function that used this object should be called again.
         """
-        raise NotImplementedError()
+        pass
 
     @property
-    def data(self):
-        return self.get()
-
-    @data.setter
-    def data(self, value):
-        self.set(value)
-
     @abstractmethod
-    def set(self, value):
-        raise NotImplementedError()
+    def __inner__(self):
+        """
+        Return the object that is wrapped.
+        It's usually a raw non observable object, however inside "Proxy" it's used to hold a reference to any object (possibly other Proxy or other wrapper)
+        It will be taken by the @reactive function and passed to the body of the function.
+        """
+        pass
 
-    @abstractmethod
-    def get(self):
-        raise NotImplementedError()
 
-    @abstractmethod
-    def exception(self):
-        raise NotImplementedError()
+def is_wrapper(v):
+    return isinstance(v, WrapperInterface)
+
+
+def unwrap(v):
+    return v.__inner__
+
+
+def unwrap_exception(v):
+    try:
+        v.__inner__
+        return None
+    except Exception as e:
+        return e
+
+
+def unwrapped(v):
+    if is_wrapper(v):
+        return unwrap(v)
+    else:
+        return v

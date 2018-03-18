@@ -1,14 +1,14 @@
 from sdupy.reactive.refresher import wait_for_var
 from .decorators import reactive, reactive_finalizable
-from .var import Var, VarBase
+from .var import Var
 
 
-@reactive()
+@reactive
 def getitem(obj, item):
     return obj[item]
 
 
-@reactive()
+@reactive
 def getitem_default(obj, item, def_val=None):
     try:
         return obj[item]

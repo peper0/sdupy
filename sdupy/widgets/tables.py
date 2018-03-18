@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 from sdupy.reactive import VarBase
 from .common.register import register_factory, register_widget
 from ..reactive import reactive
-from ..reactive.decorators import var_from_gen
 
 
 @register_widget("generic table")
@@ -34,7 +33,6 @@ class Table(QWidget):
     def load_state(self, state: dict):
         if 'header_state' in state:
             self._table_view.horizontalHeader().restoreState(bytes.fromhex(state['header_state']))
-
 
 
 @register_widget("variables table")
@@ -104,7 +102,7 @@ class VarsModel(QAbstractTableModel):
 
     def clear(self):
         if len(self.vars) > 0:
-            self.beginRemoveRows(QModelIndex(), 0, len(self.vars)-1)
+            self.beginRemoveRows(QModelIndex(), 0, len(self.vars) - 1)
             self.vars.clear()
             self.endRemoveRows()
 
@@ -329,7 +327,7 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
         sio = io.StringIO()
         tb = ei[2]
         # See issues #9427, #1553375. Commented out for now.
-        #if getattr(self, 'fullstack', False):
+        # if getattr(self, 'fullstack', False):
         #    traceback.print_stack(tb.tb_frame.f_back, file=sio)
         traceback.print_exception(ei[0], ei[1], tb, None, sio)
         s = sio.getvalue()
@@ -342,8 +340,8 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
 global_logger_handler = LogRecordsModel()
 
 logging.getLogger().addHandler(global_logger_handler)
-#logging.getLogger().setLevel(logging.DEBUG)
-#global_logger_handler.setLevel(logging.DEBUG)
+# logging.getLogger().setLevel(logging.DEBUG)
+# global_logger_handler.setLevel(logging.DEBUG)
 
 logging.getLogger().setLevel(logging.INFO)
 global_logger_handler.setLevel(logging.INFO)

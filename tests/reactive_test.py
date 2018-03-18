@@ -4,9 +4,45 @@ import gc
 import asynctest
 
 from sdupy.reactive import wait_for_var
+from sdupy.reactive.common import WrapperInterface, unwrap, unwrap_exception
+from sdupy.reactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
-from sdupy.reactive.var2 import Observable, Wrapper, raw, reactive, reactive_finalizable, var
+from sdupy.reactive.notifier import Notifier
+from sdupy.reactive.var import const, var
+
+
+class NotifierTests(asynctest.TestCase):
+    def setUp(self):
+        self._notifier = Notifier()
+        self._notifier2 = Notifier()
+        self.cbk_called = 0
+
+    def cbk(self):
+        self.cbk_called += 1
+
+    async def test_first(self):
+        cbk = self.cbk
+        self._notifier.add_observer(cbk, None)
+        await asyncio.sleep(0.1)
+        self.assertEqual(self.cbk_called, 0)
+
+        self._notifier.notify_observers()
+
+        await asyncio.sleep(0.1)
+        self.assertEqual(self.cbk_called, 1)
+
+    async def test_dont_call_multiple(self):
+        cbk = self.cbk
+        self._notifier.add_observer(cbk, None)
+        await asyncio.sleep(0.1)
+        self.assertEqual(self.cbk_called, 0)
+
+        for i in range(10):
+            self._notifier.notify_observers()
+
+        await asyncio.sleep(0.1)
+        self.assertEqual(self.cbk_called, 1)
 
 
 @reactive
@@ -25,43 +61,43 @@ class SimpleReactive(asynctest.TestCase):
         a = var(2)
         res = my_sum(a, 5)
         await wait_for_var(res)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_val_keyword(self):
         a = var(2)
         res = my_sum(a=a, b=5)
         await wait_for_var(res)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_var(self):
         a = var(2)
         b = var(5)
         res = my_sum(a=a, b=b)
         await wait_for_var(res)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_changes(self):
         a = var(2)
         b = var(5)
         res = my_sum(a=a, b=b)
-        a.set(6)
+        a @= 6
         await wait_for_var(res)
-        self.assertEqual(raw(res), 11)  # 6+5
-        b.set(3)
+        self.assertEqual(unwrap(res), 11)  # 6+5
+        b @= 3
         await wait_for_var(res)
-        self.assertEqual(raw(res), 9)  # 6+3
+        self.assertEqual(unwrap(res), 9)  # 6+3
 
     async def test_exception_propagation(self):
         a = var(None)
         b = var()
         res = my_sum(a=a, b=b)
         await wait_for_var(res)
-        self.assertIsNotNone(res.OBS.exception)
+        self.assertIsNotNone(unwrap_exception(res))
         with self.assertRaisesRegex(Exception, r'.*b.*'):
-            raw(res)
+            unwrap(res)
 
 
 @reactive
@@ -79,21 +115,21 @@ class SimpleReactiveAsync(asynctest.TestCase):
     async def test_var_val_positional(self):
         a = var(2)
         res = await async_sum(a, 5)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_val_keyword(self):
         a = var(2)
         res = await async_sum(a=a, b=5)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_var(self):
         a = var(2)
         b = var(5)
         res = await async_sum(a=a, b=b)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
 
     async def test_var_changes(self):
         a = var(2)
@@ -101,19 +137,19 @@ class SimpleReactiveAsync(asynctest.TestCase):
         res = await async_sum(a=a, b=b)
         a.set(6)
         await wait_for_var(res)
-        self.assertEqual(raw(res), 11)  # 6+5
+        self.assertEqual(unwrap(res), 11)  # 6+5
         b.set(3)
         await wait_for_var(res)
-        self.assertEqual(raw(res), 9)  # 6+3
+        self.assertEqual(unwrap(res), 9)  # 6+3
 
     async def test_exception_propagation(self):
         a = var(3)
         b = var()
         res = await async_sum(a=a, b=b)
         await wait_for_var(res)
-        self.assertIsNotNone(res.OBS.exception)
+        self.assertIsNotNone(unwrap_exception(res))
         with self.assertRaisesRegex(Exception, r'.*b.*'):
-            raw(res)
+            unwrap(res)
 
 
 inside = 0
@@ -143,14 +179,14 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = var(5)
         res = sum_with_yield(2, b=b)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
         gc.collect()
         self.assertEqual(inside, 1)
         b.set(1)
         print("w1")
         await wait_for_var(res)
-        self.assertEqual(raw(res), 3)
+        self.assertEqual(unwrap(res), 3)
         self.assertEqual(inside, 1)
         # await res.dispose()
         del b
@@ -167,19 +203,19 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_exception_propagation(self):
         b = var()
         res = sum_with_yield(2, b=b)
-        self.assertIsInstance(res, Wrapper)
+        self.assertIsInstance(res, WrapperInterface)
         await wait_for_var(res)
         gc.collect()
         self.assertEqual(inside, 0)
-        self.assertIsNotNone(res.OBS.exception)
+        self.assertIsNotNone(unwrap_exception(res))
         with self.assertRaisesRegex(Exception, r'.*b.*'):
-            raw(res)
+            unwrap(res)
         b.set(5)
         await wait_for_var(res)
         gc.collect()
         self.assertEqual(inside, 1)
-        self.assertIsNone(res.OBS.exception)
-        self.assertEqual(raw(res), 7)
+        self.assertIsNone(unwrap_exception(res))
+        self.assertEqual(unwrap(res), 7)
 
 
 @reactive_finalizable
@@ -205,30 +241,56 @@ class AsyncReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = var(5)
         res = await async_sum_with_yield(2, b=b)
-        self.assertIsInstance(res, Wrapper)
-        self.assertEqual(raw(res), 7)
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
         self.assertEqual(inside, 1)
-        b.OBS.data = 1
+        b @= 1
         await wait_for_var(res)
-        self.assertEqual(raw(res), 3)
+        self.assertEqual(unwrap(res), 3)
         self.assertEqual(inside, 1)
         del res
         await asyncio.sleep((0.1))
 
     async def test_exception_propagation(self):
         b = var()
-        res = await async_sum_with_yield(2, b=b)  # type: Wrapper
+        res = await async_sum_with_yield(2, b=b)  # type: WrapperInterface
         await wait_for_var(res)
         self.assertEqual(inside, 0)
-        self.assertIsNotNone(res.OBS.exception)
+        self.assertIsNotNone(unwrap_exception(res))
         with self.assertRaisesRegex(Exception, r'.*b.*'):
-            raw(res)
+            unwrap(res)
 
-        b.OBS.data = 5
+        b @= 5
         await wait_for_var(res)
         # self.assertEqual(inside, 1)
         # self.assertIsNone(res.exception)
         # self.assertEqual(raw(res), 7)
+
+
+class Forwarders(asynctest.TestCase):
+    async def test_operator_add(self):
+        a = var(2)
+        b = const(5)
+        res = a + b
+        self.assertEqual(unwrap(res), 7)
+
+        a @= 6
+        await wait_for_var(res)
+        self.assertEqual(unwrap(res), 11)  # 6+5
+
+    async def test_operator_cmp(self):
+        a = var(2)
+        b = var(5)
+        a_greater = a > b
+        self.assertFalse(unwrap(a_greater))
+
+        a @= 5
+        await wait_for_var()
+        self.assertFalse(unwrap(a_greater))
+
+        a @= 6
+        await wait_for_var()
+        self.assertTrue(unwrap(a_greater))
 
 
 # @reactive(args_fwd_none=['a', 'b'])
@@ -257,7 +319,7 @@ class AsyncReactiveWithYield(asynctest.TestCase):
 
 
 called_times = 0
-some_observable = Wrapper(Observable())
+some_observable = var()
 
 
 @reactive(other_deps=[some_observable])
@@ -276,17 +338,17 @@ class OtherDeps(asynctest.TestCase):
         await wait_for_var(res)
         self.assertEqual(called_times, 1)
 
-        a.OBS.data = 55
+        a @= 55
         await wait_for_var(res)
         await asyncio.sleep(0.1)
         self.assertEqual(called_times, 2)
 
-        some_observable.OBS.notify_observers()
+        some_observable.__notifier__.notify_observers()
         await wait_for_var(res)
         await asyncio.sleep(1)
         self.assertEqual(called_times, 3)
 
-        some_observable.OBS.notify_observers()
+        some_observable.__notifier__.notify_observers()
         await wait_for_var(res)
         await asyncio.sleep(1)
         self.assertEqual(called_times, 4)
@@ -312,12 +374,12 @@ class DepOnlyArgs(asynctest.TestCase):
         self.assertEqual(called_times2, 1)
         self.assertEqual(res, 55)
 
-        a.OBS.set(10)
+        a @= 10
         await wait_for_var(res)
         self.assertEqual(called_times2, 2)
         self.assertEqual(res, 10)
 
-        some_observable.OBS.notify_observers()
+        some_observable.__notifier__.notify_observers()
         await wait_for_var(res)
         self.assertEqual(called_times2, 3)
         self.assertEqual(res, 10)
@@ -346,15 +408,15 @@ class Task(asynctest.TestCase):
         queue = asyncio.Queue()
         res = await var_from_gen(appender(queue))
 
-        self.assertIsInstance(res, Wrapper)
+        self.assertIsInstance(res, WrapperInterface)
         await asyncio.sleep(0)
-        self.assertEqual(raw(res), [])
+        self.assertEqual(unwrap(res), [])
         await queue.put(5)
         await asyncio.sleep(0.1)
-        self.assertEqual(raw(res), [5])
+        self.assertEqual(unwrap(res), [5])
         await queue.put(1)
         await asyncio.sleep(0)
-        self.assertEqual(raw(res), [5, 1])
+        self.assertEqual(unwrap(res), [5, 1])
         self.assertEqual(inside, 1)
         await res.dispose()
         del res

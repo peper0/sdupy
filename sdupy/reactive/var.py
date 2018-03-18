@@ -1,282 +1,351 @@
+import asyncio
+import inspect
 import logging
-import weakref
 from abc import abstractmethod
-from typing import Any, Union
+from contextlib import contextmanager
+from itertools import chain
+from typing import Any, Dict, List, Tuple
 
-from . import decorators
-from .common import Observer, VarInterface
-
-logger = logging.getLogger('reactive')
-
-
-def make_rval(*args, **kwargs):
-    return RVal(*args, **kwargs)
+from sdupy.reactive.common import WrapperInterface, is_wrapper, unwrapped
+from .decorators import DecoratedFunction
+from .forwarder import CommonForwarders
+from .notifier import DummyNotifier, Notifier
 
 
-class ObservableData():
-    pass
-
-
-# rename to "Observable"?
-class VarBase(VarInterface):
-    """
-    Var is not hashable since two hashable object must be equal or inequal during their lifetime (and it changes in
-    Var).
-    """
-
+class Wrapper(WrapperInterface):
     def __init__(self):
-        self._observers = weakref.WeakSet()  # type: Iterable[Observer]
-        self.on_dispose = None
-        self.disposed = False
-        self._kept_references = []
-        self.OBS = ObservableData()  # FIXME: put everything here
-
-    def __del__(self):
-        if not self.disposed and self.on_dispose:
-            get_default_refresher().schedule_call(self.on_dispose, self.on_dispose)
-            # assert self.disposed, "Var.dispose was not called before destroying"
-
-    def notify_observers(self):
-        for corof in self._observers:  # type: Observer
-            get_default_refresher().schedule_call(corof, corof)
-
-    async def dispose(self):
-        if not self.disposed:
-            if self.on_dispose:
-                await self.on_dispose()
-            self.disposed = True
-
-    def add_observer(self, observer: Observer):
-        self._observers.add(observer)
-
-    def keep_reference(self, o):
-        """
-        Keeps a reference to `o` for own Var instance lifetime.
-        """
-        self._kept_references.append(o)
+        self._notifier = Notifier()
+        self._exception = None  # type: Exception
+        self._raw = None
 
     @property
-    def data(self):
-        return self.get()
+    def __notifier__(self):
+        return self._notifier
 
-    @data.setter
-    def data(self, value):
-        self.set(value)
+    @property
+    def __inner__(self):
+        if self._exception:
+            raise self._exception
+        return self._raw
 
-    @abstractmethod
-    def set(self, value):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get(self):
-        raise NotImplementedError()
+    def _target(self):
+        return self
 
     def __repr__(self):
         # print()
-        if self.exception():
-            return '{}(exception={})'.format(self.__class__.__name__, repr(self.exception()))
-        else:
-            return '{}({})'.format(self.__class__.__name__, repr(self.data))
-        # return "Var"
-
-    def __str__(self):
-        return str(self.data)
-        # return "Var"
-
-    def __bytes__(self):
-        return bytes(self.data)
-
-    def __format__(self, format_spec):
-        return format(self.data)
-        # return "Var"
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __getattr__(self_data, item):
-        return getattr(self_data, item)
-
-    # @decorators.reactive(args_fwd_none=[0, 1])
-    # def __setattr__(self_data, key, value):
-    #    return setattr(self_data, key, value)
-
-    def __delattr__(self, key):
-        return setattr(self.data, key)
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __call__(self_data, *args, **kwargs):
-        return self_data(*args, **kwargs)
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __len__(self_data):
-        return len(self_data)
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __contains__(self_data, item):
-        return item in self_data
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __getitem__(self_data, item):
-        return self_data[item]
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __setitem__(self_data, key, value):
-        self_data[key] = value
-
-    def __delitem__(self, key, value):
-        del self.data[key]
-
-    @decorators.reactive(args_fwd_none=[0])
-    def __missing__(self_data, key):
-        return self_data.__missing__(key)
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __add__(self_data, other):
-        return self_data + other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __sub__(self_data, other):
-        return self_data - other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __mul__(self_data, other):
-        return self_data * other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __truediv__(self_data, other):
-        return self_data / other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __floordiv__(self_data, other):
-        return self_data // other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __radd__(self_data, other):
-        return other + self_data
-
-    def __iadd__(self_data, other):
-        self_data += other
-
-    @decorators.reactive(args_fwd_none=[0, 1])
-    def __eq__(self_data, other):
-        return self_data == other
-
-    def __bool__(self):
-        return self.data.__bool__()
-
-        # TODO: rest of arithmetic and logic functions (http://www.diveintopython3.net/special-method-names.html)
+        try:
+            return '{}({})'.format(self.__class__.__name__, repr(self.__inner__))
+        except Exception as e:
+            return '{}(exception={})'.format(self.__class__.__name__, repr(e))
 
 
-Observable = VarBase
+class Constant(WrapperInterface, CommonForwarders):
+    dummy_notifier = DummyNotifier(priority=0)
 
-
-class Var(VarBase):
-    class NotInitialized:
-        pass
-
-    NOT_INITIALIZED = NotInitialized()
-
-    def __init__(self, data=NOT_INITIALIZED):
+    def __init__(self, raw):
         super().__init__()
-        self._data = data
-        self._exception = ValueError("not initialized") if data is self.NOT_INITIALIZED else None
+        self._raw = raw
+
+    @property
+    def __notifier__(self):
+        return self.dummy_notifier
+
+    @property
+    def __inner__(self):
+        return self._raw
+
+    def _target(self):
+        return self
+
+
+def const(raw):
+    return Constant(raw)
+
+
+class NotInitializedError(Exception):
+    def __init__(self):
+        super().__init__('not initialized')
+
+
+class ArgumentError(Exception):
+    def __init__(self, arg_name):
+        super().__init__("propagating exception from arg '{}'".format(arg_name))
+        self.arg_name = arg_name
+
+
+class Var(Wrapper, CommonForwarders):
+    NOT_INITIALIZED = NotInitializedError()
+
+    def __init__(self, raw=NOT_INITIALIZED):
+        super().__init__()
+        if raw is self.NOT_INITIALIZED:
+            self.set_exception(NotInitializedError())
+        else:
+            self.set(raw)
 
     def set(self, value):
+        self._raw = value
         self._exception = None
-        self._data = value
-        self.notify_observers()
+        self._notifier.notify_observers()
 
-    def get(self):
-        if self._exception:
-            raise self._exception
-        return self._data
+    def set_exception(self, e):
+        self._exception = e
+        self._raw = None
+        self._notifier.notify_observers()
 
-    def exception(self):
-        return self._exception
+    # noinspection PyMethodOverriding
+    @Wrapper.__inner__.setter
+    def __inner__(self, value):
+        return self.set(value)
+
+    def __imatmul__(self, other):
+        """
+        A syntax sugar (at the expense of some inconsistency and inconvenience when we want to make @= on the inner)
+        """
+        self.set(other)
+        return self
+
+
+def var(raw=Var.NOT_INITIALIZED):
+    return Var(raw)
+
+
+def is_observable(v):
+    """
+    Check whether given object should be considered as "observable" i.e. the object that manages notifiers internally
+    and returns observable objects from it's methods.
+    """
+    return hasattr(v, '__observable__')
+
+
+def wrap(v):
+    # TODO: do magic with selecting proper wrapper or reusing one if was done already for this object
+    return const(v)
+
+
+def as_observable(v):
+    if is_observable(v):
+        return v
+    else:
+        return wrap(v)
+
+
+def rewrap_args(args, kwargs, args_names, args_as_vars) -> Tuple[List[Any], Dict[str, Any]]:
+    def rewrap(index, name, arg):
+        try:
+            if index in args_as_vars or name in args_as_vars:
+                return as_observable(arg)
+            else:
+                return unwrapped(arg)
+        except Exception as exception:
+            raise ArgumentError(name or str(index)) from exception
+
+    def arg_name(index):
+        return args_names[index] if index < len(args_names) else None
+
+    return ([rewrap(index, arg_name(index), arg) for index, arg in enumerate(args)],
+            {name: rewrap(None, name, arg) for name, arg in kwargs})
+
+
+def maybe_observe(arg, notify_callback, notifiers):
+    if is_wrapper(arg):
+        return arg.__notifier__.add_observer(notify_callback, notifiers)
+
+
+def observe_args(args, kwargs, notify_callback, notifiers):
+    for arg in chain(args, kwargs.values()):
+        maybe_observe(arg, notify_callback, notifiers)
+
+
+class Proxy(WrapperInterface, CommonForwarders):
+    """
+    A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
+    exactly like the object itself.
+
+    It must implement WrapperInterface since it's possible that the object inside implements it. If the
+    Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._ref = Var()
+        self._notifier = Notifier()
+        self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
+        self._ref.__notifier__.add_observer(self._notify_observers, self._notifier)
+
+    @property
+    def __notifier__(self):
+        return self._notifier
+
+    @property
+    def __inner__(self):
+        ref = self._ref.__inner__
+        if ref and hasattr(ref, '__inner__'):
+            return ref.__inner__
+
+    def _target(self):
+        return self._ref
+
+    def _get_ref(self):
+        try:
+            return self._ref.__inner__
+        except Exception:
+            return None
+
+    def _set_ref(self, ref):
+        self._unobserve_value()
+        self._ref @= as_observable(ref)
+        self._observe_value()
+
+    def _unobserve_value(self):
+        ref = self._get_ref()
+        if ref and hasattr(ref, '__notifier__'):
+            return ref.__notifier__.remove_observer(self)
+
+    def _observe_value(self):
+        ref = self._get_ref()
+        if ref and hasattr(ref, '__notifier__'):
+            return ref.__notifier__.add_observer(self._notify_observers, self._notifier)
+
+    def __getattr__(self, item):
+        # FIXME: optional proxying result (if returned value is proxy)
+        return getattr(self._target().__inner__, item)
+
+    # TODO: other forwarders
 
 
 class HashableCallable:
-    def __init__(self, callable, id):
-        logging.fatal("created {}".format(id))
-        self.id = id
+    def __init__(self, callable, uid):
         self.callable = callable
+        self.uid = uid
 
     def __call__(self, *args, **kwargs):
-        logging.fatal("call")
         return self.callable(*args, **kwargs)
 
-    def __eq__(self, other):
-        return isinstance(other, HashableCallable) and self.id == other.id
-
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.uid)
+
+    def __getattr__(self, item):
+        return getattr(self.callable, item)
+
+    def __eq__(self, other):
+        return isinstance(other, HashableCallable) and self.uid == other.uid
 
 
-class RVal(VarBase):
-    def __init__(self):
+class ReactiveProxy(Proxy):
+    def __init__(self, decorated: DecoratedFunction, args, kwargs):
         super().__init__()
-        self._data = None  # type: Union[VarBase, Any]
-        self._exception = ValueError("not provided")
-        self._target_var = None
-        self._updater = None
+        self.decorated = decorated
+        self._update_ref_holder = HashableCallable(self._update, (id(self), ReactiveProxy._update))
 
-    def provide(self, data_or_target, exception=None):
-        assert data_or_target is not self
-        if exception is not None:
-            assert data_or_target is None
-            self.provide_exception(exception)
-        elif isinstance(data_or_target, VarBase):
-            self._target_var = data_or_target
-            self._exception = None
-            self._data = None
-            self._updater = HashableCallable(self.notify_observers, id(self))  # we must hold it since observable has
-            #  only weak ref to it's observers
-            logging.fatal("should create {}".format(id(self)))
-            self._target_var.add_observer(self._updater)
+        # use dep_only_args
+        for name in decorated.decorator.dep_only_args:
+            if name in kwargs:
+                maybe_observe(kwargs[name], self._update_ref_holder, self.__notifier__)
+                del kwargs[name]
+
+        # use other_deps
+        for dep in decorated.decorator.other_deps:
+            maybe_observe(dep, self._update_ref_holder, self.__notifier__)
+
+        if decorated.signature:
+            # support default parameters
+            bound_args = decorated.signature.bind(*args, **kwargs)  # type: inspect.BoundArguments
+            bound_args.apply_defaults()
+            self.args = bound_args.args
+            self.kwargs = bound_args.kwargs
         else:
-            self._data = data_or_target
-            self._exception = None
-            self._target_var = None
-            self._updater = None
-        self.notify_observers()
+            self.args = args
+            self.kwargs = kwargs
 
-    def provide_exception(self, exception):
-        self._exception = exception
-        self._data = None
-        self._target_var = None
-        self.notify_observers()
+        observe_args(self.args, self.kwargs, self._update_ref_holder, self.__notifier__)
 
-    def handle_exception(self):
-        var = self
+    @contextmanager
+    def _handle_exception(self):
+        try:
+            yield
+        except Exception as e:
+            self._ref.set_exception(e)
 
-        class ExceptionHandler:
-            def __enter__(self):
-                pass
+    def _call(self):
+        # returns one of:
+        # - the result,
+        # - a coroutine (to be awaited),
+        # - a generator to be run once and finalized before the next call
+        # - an async generator
+        args, kwargs = rewrap_args(self.args, self.kwargs, self.decorated.args_names,
+                                   self.decorated.decorator.args_as_vars)
+        return self.decorated.callable(*args, **kwargs)
 
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                if exc_val is not None:
-                    var.provide_exception(exc_val)
-                return True
-
-        return ExceptionHandler()
-
-    def get(self):
-        if self._target_var is not None:
-            return self._target_var.get()
-        elif self._exception:
-            raise self._exception
-        else:
-            return self._data
-
-    def set(self, value):
-        if self._target_var is not None:
-            return self._target_var.set(value)
-        else:
-            raise Exception("read-only variable")
-
-    def exception(self):
-        if self._target_var is not None:
-            return self._target_var.exception
-        else:
-            return self._exception
+    @abstractmethod
+    def _update(self, retval=None):
+        pass
 
 
-decorators.var_factory = RVal
+class SyncReactiveProxy(ReactiveProxy):
+    def _update(self, retval=None):
+        with self._handle_exception():
+            res = self._call()
+            self._set_ref(res)
+        return retval
+
+
+class AsyncReactiveProxy(ReactiveProxy):
+    async def _update(self, retval=None):
+        with self._handle_exception():
+            res = await self._call()
+            self._set_ref(res)
+        return retval
+
+
+class CmReactiveProxy(ReactiveProxy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cm = None
+
+    def _update(self, retval=None):
+        self._cleanup()
+
+        with self._handle_exception():
+            self.cm = self._call()
+            res = self.cm.__enter__()
+            self._set_ref(res)
+        return retval
+
+    def __del__(self):
+        self._cleanup()
+
+    def _cleanup(self):
+        try:
+            if self.cm:
+                self.cm.__exit__(None, None, None)
+                self.cm = None
+        except Exception:
+            logging.exception("ignoring exception in cleanup")
+
+
+class AsyncCmReactiveProxy(ReactiveProxy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cm = None
+
+    async def _update(self, retval=None):
+        await self._cleanup()
+
+        with self._handle_exception():
+            self.cm = self._call()
+            res = await self.cm.__aenter__()
+            self._set_ref(res)
+        return retval
+
+    def __del__(self):
+        asyncio.ensure_future(self._cleanup())
+
+    async def _cleanup(self):
+        try:
+            if self.cm:
+                cm = self.cm
+                self.cm = None
+                await cm.__aexit__(None, None, None)
+        except Exception:
+            logging.exception("ignoring exception in cleanup")
