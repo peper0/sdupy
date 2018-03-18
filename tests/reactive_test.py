@@ -9,7 +9,7 @@ from sdupy.reactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
 from sdupy.reactive.notifier import Notifier
-from sdupy.reactive.var import const, var
+from sdupy.reactive.var import ArgumentError, const, var
 
 
 class NotifierTests(asynctest.TestCase):
@@ -291,6 +291,67 @@ class Forwarders(asynctest.TestCase):
         a @= 6
         await wait_for_var()
         self.assertTrue(unwrap(a_greater))
+
+    async def test_operator_neg(self):
+        a = var(2)
+        res = -a
+        self.assertEqual(unwrap(res), -2)
+
+        a @= -5
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 5)
+
+    async def test_operator_assign_add(self):
+        a = var(2)
+        res = a + 5
+        self.assertEqual(unwrap(res), 7)
+
+        a += 3
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 10)
+
+    async def test_operator_getitem_and_exception(self):
+        a = var(('a', 'b'))
+        res = a[1]
+        self.assertEqual(unwrap(res), 'b')
+
+        a @= ('A', 'B', 'C')
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 'B')
+
+        a @= ('A',)
+        await wait_for_var()
+        with self.assertRaises(IndexError):
+            unwrap(res)
+
+        a @= 5
+        await wait_for_var()
+        with self.assertRaises(AttributeError):
+            unwrap(res)
+
+        # check if it works again
+        a @= (1, 2, 3)
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 2)
+
+    async def test_operator_getitem_setitem_delitem(self):
+        a = var()
+        res = a[1]
+        await wait_for_var()
+        with self.assertRaises(ArgumentError):
+            unwrap(res)
+
+        a @= [1, 2, 3]
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 2)
+
+        a[1] = 'hej'
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 'hej')
+
+        del a[1]
+        await wait_for_var()
+        self.assertEqual(unwrap(res), 3)
 
 
 # @reactive(args_fwd_none=['a', 'b'])
