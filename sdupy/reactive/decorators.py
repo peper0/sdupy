@@ -19,14 +19,23 @@ class Reactive:
         Decorate the function.
         """
         if asyncio.iscoroutinefunction(func):
-            def factory(*args, **kwargs):
-                # import here to avoid circular dependency (AsyncReactiveProxy does Reactive.__call__ for it's members)
-                from .var import AsyncReactiveProxy
-                return AsyncReactiveProxy(*args, **kwargs)
+            def factory(decorated, args, kwargs):
+                if args_need_reaction(args, kwargs):
+                    # import here to avoid circular dependency (AsyncReactiveProxy does Reactive.__call__ for it's members)
+                    from .var import AsyncReactiveProxy
+                    res = AsyncReactiveProxy(decorated, args, kwargs)
+                    return res._update(res)
+                else:
+                    return decorated.callable(*args, **kwargs)
         elif hasattr(func, '__call__'):
-            def factory(*args, **kwargs):
-                from .var import SyncReactiveProxy
-                return SyncReactiveProxy(*args, **kwargs)
+            def factory(decorated, args, kwargs):
+                if args_need_reaction(args, kwargs):
+                    # import here to avoid circular dependency (SyncReactiveProxy does Reactive.__call__ for it's members)
+                    from .var import SyncReactiveProxy
+                    res = SyncReactiveProxy(decorated, args, kwargs)
+                    return res._update(res)
+                else:
+                    return decorated.callable(*args, **kwargs)
         else:
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(func)))
         return DecoratedFunction(self, factory, func)
@@ -44,11 +53,7 @@ class DecoratedFunction:
         """
         Bind arguments, call function once and schedule it to be called on any arguments change.
         """
-        if args_need_reaction(args, kwargs):
-            res = self.factory(self, args, kwargs)
-            return res._update(res)
-        else:
-            return self.callable(*args, **kwargs)
+        return self.factory(self, args, kwargs)
 
 
 @overload
@@ -95,14 +100,17 @@ class ReactiveCm(Reactive):
         Decorate the function.
         """
         if hasattr(func, '_isasync') and func._isasync:
-            def factory(*args, **kwargs):
+            def factory(decorated, args, kwargs):
                 # import here to avoid circular dependency (AsyncReactiveProxy does Reactive.__call__ for it's members)
                 from .var import AsyncCmReactiveProxy
-                return AsyncCmReactiveProxy(*args, **kwargs)
+                res = AsyncCmReactiveProxy(decorated, args, kwargs)
+                return res._update(res)
+
         elif hasattr(func, '__call__'):
-            def factory(*args, **kwargs):
+            def factory(decorated, args, kwargs):
                 from .var import CmReactiveProxy
-                return CmReactiveProxy(*args, **kwargs)
+                res = CmReactiveProxy(decorated, args, kwargs)
+                return res._update(res)
         else:
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(func)))
         return DecoratedFunction(self, factory, func)

@@ -9,7 +9,7 @@ from sdupy.reactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
 from sdupy.reactive.notifier import Notifier
-from sdupy.reactive.var import ArgumentError, const, var
+from sdupy.reactive.var import var
 
 
 class NotifierTests(asynctest.TestCase):
@@ -176,6 +176,19 @@ class ReactiveWithYield(asynctest.TestCase):
         await asyncio.sleep(0.01)
         self.assertEqual(inside, 0)
 
+    async def test_with_raw(self):
+        res = sum_with_yield(2, 5)
+        # in this case we must return something that finalizes the function when destroyed
+        self.assertIsInstance(res, WrapperInterface)
+        self.assertEqual(unwrap(res), 7)
+        self.assertEqual(inside, 1)
+        await wait_for_var(res)
+        del res
+        await wait_for_var()
+        await asyncio.sleep(0.5)
+        gc.collect()
+        self.assertEqual(inside, 0)
+
     async def test_a(self):
         b = var(5)
         res = sum_with_yield(2, b=b)
@@ -267,93 +280,6 @@ class AsyncReactiveWithYield(asynctest.TestCase):
         # self.assertEqual(raw(res), 7)
 
 
-class Forwarders(asynctest.TestCase):
-    async def test_operator_add(self):
-        a = var(2)
-        b = const(5)
-        res = a + b
-        self.assertEqual(unwrap(res), 7)
-
-        a @= 6
-        await wait_for_var(res)
-        self.assertEqual(unwrap(res), 11)  # 6+5
-
-    async def test_operator_cmp(self):
-        a = var(2)
-        b = var(5)
-        a_greater = a > b
-        self.assertFalse(unwrap(a_greater))
-
-        a @= 5
-        await wait_for_var()
-        self.assertFalse(unwrap(a_greater))
-
-        a @= 6
-        await wait_for_var()
-        self.assertTrue(unwrap(a_greater))
-
-    async def test_operator_neg(self):
-        a = var(2)
-        res = -a
-        self.assertEqual(unwrap(res), -2)
-
-        a @= -5
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 5)
-
-    async def test_operator_assign_add(self):
-        a = var(2)
-        res = a + 5
-        self.assertEqual(unwrap(res), 7)
-
-        a += 3
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 10)
-
-    async def test_operator_getitem_and_exception(self):
-        a = var(('a', 'b'))
-        res = a[1]
-        self.assertEqual(unwrap(res), 'b')
-
-        a @= ('A', 'B', 'C')
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 'B')
-
-        a @= ('A',)
-        await wait_for_var()
-        with self.assertRaises(IndexError):
-            unwrap(res)
-
-        a @= 5
-        await wait_for_var()
-        with self.assertRaises(AttributeError):
-            unwrap(res)
-
-        # check if it works again
-        a @= (1, 2, 3)
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 2)
-
-    async def test_operator_getitem_setitem_delitem(self):
-        a = var()
-        res = a[1]
-        await wait_for_var()
-        with self.assertRaises(ArgumentError):
-            unwrap(res)
-
-        a @= [1, 2, 3]
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 2)
-
-        a[1] = 'hej'
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 'hej')
-
-        del a[1]
-        await wait_for_var()
-        self.assertEqual(unwrap(res), 3)
-
-
 # @reactive(args_fwd_none=['a', 'b'])
 # def none_proof_sum(a, b):
 #     return a + b
@@ -381,6 +307,7 @@ class Forwarders(asynctest.TestCase):
 
 called_times = 0
 some_observable = var()
+some_observable2 = var()
 
 
 @reactive(other_deps=[some_observable])
@@ -426,11 +353,15 @@ def inc_called_times2(a):
 
 
 class DepOnlyArgs(asynctest.TestCase):
+    async def setUp(self):
+        self.observable1 = var()
+        self.observable2 = var()
+
     async def test_vars(self):
         global called_times2
         called_times2 = 0
         a = var(55)
-        res = inc_called_times2(a, ignored_arg=some_observable)
+        res = inc_called_times2(a, ignored_arg=self.observable1)
         await wait_for_var(res)
         self.assertEqual(called_times2, 1)
         self.assertEqual(res, 55)
@@ -440,10 +371,27 @@ class DepOnlyArgs(asynctest.TestCase):
         self.assertEqual(called_times2, 2)
         self.assertEqual(res, 10)
 
-        some_observable.__notifier__.notify_observers()
+        self.observable1.__notifier__.notify_observers()
         await wait_for_var(res)
         self.assertEqual(called_times2, 3)
         self.assertEqual(res, 10)
+
+    async def test_iterable(self):
+        global called_times2
+        called_times2 = 0
+        a = var(55)
+        res = inc_called_times2(a, ignored_arg=[self.observable1, self.observable2])
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        self.assertEqual(res, 55)
+
+        self.observable1.__notifier__.notify_observers()
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 2)
+
+        self.observable2.__notifier__.notify_observers()
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 3)
 
 
 @reactive

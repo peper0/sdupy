@@ -1,204 +1,108 @@
 import operator
 from abc import abstractmethod
-from typing import Any, Iterable
+from functools import wraps
+from math import ceil, floor, trunc
 
+from sdupy.reactive.wrapping import add_assignop_forwarders, add_notifying_forwarders, add_reactive_forwarders
 from .decorators import reactive
 
-
-def add_reactive_forwarders_0arg(cl: Any, functions: Iterable[str]):
-    """
-    For operators and methods that don't modify a state of an object (__neg_, etc.).
-    """
-
-    def add_one(cl: Any, name):
-        def func(self):
-            @reactive
-            def reactive_f(self_unwrapped):
-                return getattr(self_unwrapped, name)()
-
-            return reactive_f(self._target())
-
-        setattr(cl, name, func)
-
-    for name in functions:
-        add_one(cl, name)
-
-
-def add_reactive_forwarders_1arg(cl: Any, functions: Iterable[str]):
-    """
-    For operators and methods that don't modify a state of an object (__add_, __getitem__, etc.).
-    """
-
-    def add_one(cl: Any, name):
-        def func(self, arg1):
-            @reactive
-            def reactive_f(self_unwrapped, other):
-                return getattr(self_unwrapped, name)(other)
-
-            return reactive_f(self._target(), arg1)
-
-        setattr(cl, name, func)
-
-    for name in functions:
-        add_one(cl, name)
-
-
-def add_assignop_forwarders(cl: Any, functions: Iterable[str]):
-    """
-    For operators like '+=' and one-arg functions like append, remove
-    """
-
-    def add_one(cl: Any, total_op_name, op):
-        def func(self, arg1):
-            target = self._target()
-            self_unwrapped = target.__inner__
-            target.__inner__ = op(self_unwrapped, arg1)
-            target.__notifier__.notify_observers()
-
-        setattr(cl, total_op_name, func)
-
-    for op_name in functions:
-        assert op_name.startswith('__')
-        assert op_name.endswith('__')
-        add_one(cl, op_name, getattr(operator, op_name[2:-2]))
-
-
-def add_modifying_forwarders_1arg(cl: Any, functions: Iterable[str]):
-    """
-    For operators like '+=' and one-arg functions like append, remove
-    """
-
-    def add_one(cl: Any, name):
-        def func(self, arg1):
-            target = self._target()
-            self_unwrapped = target.__inner__
-            res = getattr(self_unwrapped, name)(arg1)
-            target.__notifier__.notify_observers()
-            return res
-
-        setattr(cl, name, func)
-
-    for name in functions:
-        add_one(cl, name)
-
-
-def add_modifying_forwarders_2arg(cl: Any, functions: Iterable[str]):
-    """
-    __setitem__, anything else?
-    """
-
-    def add_one(cl: Any, name):
-        def func(self, arg1, arg2):
-            target = self._target()
-            self_unwrapped = target.__inner__
-            res = getattr(self_unwrapped, name)(arg1, arg2)
-            target.__notifier__.notify_observers()
-            return res
-
-        setattr(cl, name, func)
-
-    for name in functions:
-        add_one(cl, name)
-
-
 UNARY_OPERATORS = [
-    '__neg__',
-    '__pos__',
-    '__abs__',
-    '__invert__',
-
-    '__round__',
-    '__trunc__',
-    '__floor__',
-    '__ceil__',
+    ('__neg__', operator.__neg__),
+    ('__pos__', operator.__pos__),
+    ('__abs__', operator.__abs__),
+    ('__invert__', operator.__invert__),
+    ('__round__', round),
+    ('__trunc__', trunc),
+    ('__floor__', floor),
+    ('__ceil__', ceil),
 ]
 
+
+def right_2arg(func):
+    @wraps(func)
+    def f(a1, a2):
+        return func(a2, a1)
+
+    return f
+
+
 BINARY_OPERATORS = [
-    # arith
-    '__add__',
-    '__sub__',
-    '__mul__',
-    # '__div__',
-    '__floordiv__',
-    '__truediv__',
-    '__mod__',
-    '__divmod__',
-    '__pow__',
-    '__radd__',
-    '__rsub__',
-    '__rmul__',
-    # '__rdiv__',
-    '__rfloordiv__',
-    '__rtruediv__',
-    '__rmod__',
-    '__rdivmod__',
-    '__rpow__',
+    # arith         # arith        
+    ('__add__', operator.__add__),
+    ('__sub__', operator.__sub__),
+    ('__mul__', operator.__mul__),
+    ('__floordiv__', operator.__floordiv__),
+    ('__truediv__', operator.__truediv__),
+    ('__mod__', operator.__mod__),
+    ('__divmod__', divmod),
+    ('__pow__', operator.__pow__),
+    ('__radd__', right_2arg(operator.__add__)),
+    ('__rsub__', right_2arg(operator.__sub__)),
+    ('__rmul__', right_2arg(operator.__mul__)),
+    ('__rfloordiv__', right_2arg(operator.__floordiv__)),
+    ('__rtruediv__', right_2arg(operator.__truediv__)),
+    ('__rmod__', right_2arg(operator.__mod__)),
+    ('__rdivmod__', right_2arg(divmod)),
+    ('__rpow__', right_2arg(operator.__pow__)),
     # logic
-    '__and__',
-    '__or__',
-    '__xor__',
-    '__lshift__',
-    '__rshift__',
-    '__rand__',
-    '__ror__',
-    '__rxor__',
-    '__rlshift__',
-    '__rrshift__',
+    ('__and__', operator.__and__),
+    ('__or__', operator.__or__),
+    ('__xor__', operator.__xor__),
+    ('__lshift__', operator.__lshift__),
+    ('__rshift__', operator.__rshift__),
+    ('__rand__', operator.__and__),
+    ('__ror__', right_2arg(operator.__or__)),
+    ('__rxor__', right_2arg(operator.__xor__)),
+    ('__rlshift__', right_2arg(operator.__lshift__)),
+    ('__rrshift__', right_2arg(operator.__rshift__)),
 ]
 
 CMP_OPERATORS = [
-    '__eq__',
-    '__ge__',
-    '__gt__',
-    '__le__',
-    '__lt__',
-    '__ne__',
+    ('__eq__', operator.__eq__),
+    ('__ge__', operator.__ge__),
+    ('__gt__', operator.__gt__),
+    ('__le__', operator.__le__),
+    ('__lt__', operator.__lt__),
+    ('__ne__', operator.__ne__),
 ]
 
 OTHER_NONMODYFING_0ARG = [
-    '__len__',
-    '__length_hint__',
-    '__reversed__',
-    '__iter__',
+    ('__len__', len),
+    ('__length_hint__', operator.length_hint),
+    ('__reversed__', reversed),
+    # '__iter__',  # it's not so simple
 ]
 
 OTHER_NONMODYFING_1ARG = [
-    '__getitem__',
-    '__missing__',
-    '__contains__',
+    ('__getitem__', operator.getitem),
+    # ('__missing__',
+    ('__contains__', operator.contains),
 ]
-
-# TODO more
-
 
 ASSIGN_MOD_OPERATORS = [
     # arith
-    '__iadd__',
-    '__isub__',
-    '__imul__',
-    # '__idiv__',
-    '__ifloordiv__',
-    '__itruediv__',
-    '__imod__',
-    '__ipow__',
+    ('__iadd__', operator.__iadd__),
+    ('__isub__', operator.__isub__),
+    ('__imul__', operator.__imul__),
 
-    # logic
-    '__iand__',
-    '__ior__',
-    '__ixor__',
-
-    '__ilshift__',
-    '__irshift__',
+    ('__ifloordiv__', operator.__ifloordiv__),
+    ('__itruediv__', operator.__itruediv__),
+    ('__imod__', operator.__imod__),
+    ('__ipow__', operator.__ipow__),
+    # logic        operator.# logic
+    ('__iand__', operator.__iand__),
+    ('__ior__', operator.__ior__),
+    ('__ixor__', operator.__ixor__),
+    ('__ilshift__', operator.__ilshift__),
+    ('__irshift__', operator.__irshift__),
 ]
 
 OTHER_MODYFING_1ARG = [
-    '__delitem__',
-    '',
+    ('__delitem__', operator.delitem),
 ]
 
 OTHER_MODYFING_2ARG = [
-    '__setitem__',
-    '',
+    ('__setitem__', operator.setitem),
 ]
 
 
@@ -225,13 +129,11 @@ class CommonForwarders(ForwarderBase):
         return format(self._target().__inner__, format_spec)
 
 
-add_reactive_forwarders_0arg(CommonForwarders, UNARY_OPERATORS + OTHER_NONMODYFING_0ARG)
-add_reactive_forwarders_1arg(CommonForwarders, BINARY_OPERATORS + CMP_OPERATORS + OTHER_NONMODYFING_1ARG)
+add_reactive_forwarders(CommonForwarders, UNARY_OPERATORS + OTHER_NONMODYFING_0ARG)
+add_reactive_forwarders(CommonForwarders, BINARY_OPERATORS + CMP_OPERATORS + OTHER_NONMODYFING_1ARG)
 
 add_assignop_forwarders(CommonForwarders, ASSIGN_MOD_OPERATORS)
-add_modifying_forwarders_1arg(CommonForwarders, OTHER_MODYFING_1ARG)
-
-add_modifying_forwarders_2arg(CommonForwarders, OTHER_MODYFING_2ARG)
+add_notifying_forwarders(CommonForwarders, OTHER_MODYFING_1ARG + OTHER_MODYFING_2ARG)
 
 
 class Forwarder2:
@@ -309,13 +211,11 @@ class Forwarder2:
     # __del__
     # __delattr__
     # __delete__
-    # __delitem__
     # __delslice__
     # __dict__
     # __get__
     # __getattr__
     # __getattribute__
-    # __getitem__
     # __getslice__
     # __hash__
     # __metaclass__
@@ -325,7 +225,6 @@ class Forwarder2:
     # __pos__
     # __set__
     # __setattr__
-    # __setitem__
     # __setslice__
     # __slots__
     # __subclasscheck__

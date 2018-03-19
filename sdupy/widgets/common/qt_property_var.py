@@ -1,13 +1,14 @@
-import logging
-
 from PyQt5.QtCore import QObject
 
-from sdupy.reactive import VarBase
+from sdupy.reactive.common import WrapperInterface
+from sdupy.reactive.forwarder import CommonForwarders
+from sdupy.reactive.notifier import Notifier
 
 
-class QtPropertyVar(VarBase):
+class QtPropertyVar(WrapperInterface, CommonForwarders):
     def __init__(self, obj: QObject, prop_name: str):
         super().__init__()
+        self._notifier = Notifier()
         self.obj = obj
         self.prop_name = prop_name
         obj_meta = obj.staticMetaObject
@@ -20,10 +21,18 @@ class QtPropertyVar(VarBase):
         notify_signal.connect(self._prop_changed)
 
     def _prop_changed(self):
-        self.notify_observers()
+        self._notifier.notify_observers()
 
     def set(self, value):
         self.obj.setProperty(self.prop_name, value)
 
     def get(self):
         return self.obj.property(self.prop_name)
+
+    @property
+    def __notifier__(self):
+        return self._notifier
+
+    @property
+    def __inner__(self):
+        return self.get()

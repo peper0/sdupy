@@ -9,9 +9,8 @@ from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
-from sdupy.reactive import VarBase
 from .common.register import register_factory, register_widget
-from ..reactive import reactive
+from ..reactive import WrapperInterface, reactive, unwrap
 
 
 @register_widget("generic table")
@@ -50,7 +49,7 @@ class VarsTable(Table):
 class VarsModel(QAbstractTableModel):
     class VarInList(NamedTuple):
         title: str
-        var: VarBase
+        var: WrapperInterface
         notifier: Callable
         to_value: Callable[[str], Any]
 
@@ -72,7 +71,7 @@ class VarsModel(QAbstractTableModel):
                     if index.column() == 0:
                         return item.title
                     elif index.column() == 1:
-                        return str(item.var.data)
+                        return str(unwrap(item.var))
 
     def flags(self, index: QModelIndex):
         if index.row() < len(self.vars):
@@ -87,8 +86,9 @@ class VarsModel(QAbstractTableModel):
                 try:
                     converted_value = item.to_value(value)
                     item.var.set(converted_value)
-                except:
+                except Exception as e:
                     logging.exception('exception during setting var')
+                    item.var.set_exception(e)
                 return True
         return super().setData(index, value, role)
 
@@ -106,7 +106,7 @@ class VarsModel(QAbstractTableModel):
             self.vars.clear()
             self.endRemoveRows()
 
-    def insert_var(self, title: str, var: VarBase, to_value: Callable[[str], Any]):
+    def insert_var(self, title: str, var: WrapperInterface, to_value: Callable[[str], Any]):
         assert var is not None
         self.remove_var(title)
 
@@ -115,7 +115,7 @@ class VarsModel(QAbstractTableModel):
                 if var_in_the_list.var == var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
 
-        var.add_observer(notify_changed)
+        var.__notifier__.add_observer(notify_changed)
 
         self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
         self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notify_changed, to_value=to_value))

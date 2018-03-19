@@ -6,17 +6,17 @@ from contextlib import contextmanager
 from itertools import chain
 from typing import Any, Dict, List, Tuple
 
-from sdupy.reactive.common import WrapperInterface, is_wrapper, unwrapped
+from .common import WrapperInterface, is_wrapper, unwrapped
 from .decorators import DecoratedFunction
 from .forwarder import CommonForwarders
 from .notifier import DummyNotifier, Notifier
 
 
 class Wrapper(WrapperInterface):
-    def __init__(self):
+    def __init__(self, raw=None):
         self._notifier = Notifier()
         self._exception = None  # type: Exception
-        self._raw = None
+        self._raw = raw
 
     @property
     def __notifier__(self):
@@ -147,9 +147,13 @@ def rewrap_args(args, kwargs, args_names, args_as_vars) -> Tuple[List[Any], Dict
             {name: rewrap(None, name, arg) for name, arg in kwargs})
 
 
+def observe(arg, notify_callback, notifiers):
+    return arg.__notifier__.add_observer(notify_callback, notifiers)
+
+
 def maybe_observe(arg, notify_callback, notifiers):
     if is_wrapper(arg):
-        return arg.__notifier__.add_observer(notify_callback, notifiers)
+        observe(arg, notify_callback, notifiers)
 
 
 def observe_args(args, kwargs, notify_callback, notifiers):
@@ -180,7 +184,7 @@ class Proxy(WrapperInterface, CommonForwarders):
     @property
     def __inner__(self):
         ref = self._ref.__inner__
-        if ref and hasattr(ref, '__inner__'):
+        if ref is not None and hasattr(ref, '__inner__'):
             return ref.__inner__
 
     def _target(self):
@@ -199,12 +203,12 @@ class Proxy(WrapperInterface, CommonForwarders):
 
     def _unobserve_value(self):
         ref = self._get_ref()
-        if ref and hasattr(ref, '__notifier__'):
+        if ref is not None and hasattr(ref, '__notifier__'):
             return ref.__notifier__.remove_observer(self)
 
     def _observe_value(self):
         ref = self._get_ref()
-        if ref and hasattr(ref, '__notifier__'):
+        if ref is not None and hasattr(ref, '__notifier__'):
             return ref.__notifier__.add_observer(self._notify_observers, self._notifier)
 
     def __getattr__(self, item):
@@ -241,7 +245,13 @@ class ReactiveProxy(Proxy):
         # use dep_only_args
         for name in decorated.decorator.dep_only_args:
             if name in kwargs:
-                maybe_observe(kwargs[name], self._update_ref_holder, self.__notifier__)
+                arg = kwargs[name]
+                if hasattr(arg, '__iter__'):
+                    for a in arg:
+                        observe(a, self._update_ref_holder, self.__notifier__)
+                else:
+                    observe(arg, self._update_ref_holder, self.__notifier__)
+
                 del kwargs[name]
 
         # use other_deps
