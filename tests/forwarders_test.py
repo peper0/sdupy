@@ -53,6 +53,7 @@ class Forwarders(asynctest.TestCase):
 
         a += 3
         await wait_for_var()
+        self.assertEqual(unwrap(a), 5)
         self.assertEqual(unwrap(res), 10)
 
     async def test_operator_getitem_and_exception(self):

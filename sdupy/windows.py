@@ -6,29 +6,22 @@ current_main_window = None  # type: MainWindow
 
 windows_by_name = dict()
 
+WindowSpec = Union[str, MainWindow, None]
 
-def gcw() -> MainWindow:
+
+def window(name: WindowSpec = None):
     """
-    Get current main window.
-    """
-    global current_main_window
-    if not current_main_window:
-        window()
-    return current_main_window
-
-
-def set_current_window(window):
-    global current_main_window
-    current_main_window = window
-
-
-def window(name=None):
-    """
-    Returns window with given name. Create it if doesn't exist. If `name` is `None`, generate a name automatically.
+    Returns window with given name. Create it if doesn't exist. If `name` is `None`, return last window used.
     :param name:
     :return:
     """
+    global current_main_window
+    if isinstance(name, MainWindow):
+        current_main_window = name
+        return name
     if name is None:
+        if current_main_window is not None:
+            return current_main_window
         for i in range(1, 1000000):
             name = "window{}".format(i)
             if name not in windows_by_name:
@@ -51,18 +44,6 @@ def window(name=None):
 
         window.close_callback = window_closed
         windows_by_name[name] = window
-    set_current_window(window)
 
+    current_main_window = window
     return window
-
-
-WindowSpec = Union[str, MainWindow, None]
-
-
-def window_for_spec(window_specifier: WindowSpec = None):
-    if window_specifier is None:
-        return gcw()
-    elif isinstance(window_specifier, str):
-        return window(window_specifier)
-    elif isinstance(window_specifier, MainWindow):
-        return MainWindow

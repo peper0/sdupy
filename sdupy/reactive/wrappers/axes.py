@@ -40,6 +40,7 @@ class ReactiveAxes(Wrapper):
         assert isinstance(axes, plt.Axes)
         super().__init__(axes)
 
+    # Plotting.Basic
     plot = plot_method(plt.Axes.plot)
     errorbar = plot_method(plt.Axes.errorbar)
     scatter = plot_method(plt.Axes.scatter)
@@ -59,13 +60,22 @@ class ReactiveAxes(Wrapper):
     broken_barh = plot_method(plt.Axes.broken_barh)
     vlines = plot_method(plt.Axes.vlines)
     hlines = plot_method(plt.Axes.hlines)
+    hlines = plot_method(plt.Axes.hlines)
     fill = plot_method(plt.Axes.fill)
-    print = print
 
+    # Plotting.Spans
     axhline = plot_method(plt.Axes.axhline)
     axhspan = plot_method(plt.Axes.axhspan)
     axvline = plot_method(plt.Axes.axvline)
     axvspan = plot_method(plt.Axes.axvspan)
+
+    # Plotting.Array
+    imshow = plot_method(plt.Axes.imshow)
+    matshow = plot_method(plt.Axes.matshow)
+    pcolor = plot_method(plt.Axes.pcolor)
+    pcolorfast = plot_method(plt.Axes.pcolorfast)
+    pcolormesh = plot_method(plt.Axes.pcolormesh)
+    spy = plot_method(plt.Axes.spy)
 
     # TODO: rest from https://matplotlib.org/api/axes_api.html#plotting
 

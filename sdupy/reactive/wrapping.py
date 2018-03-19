@@ -90,6 +90,7 @@ def add_assignop_forwarders(cl: Any, functions: Iterable[Tuple[str, Callable]]):
             self_unwrapped = target.__inner__
             target.__inner__ = func(self_unwrapped, arg1)
             target.__notifier__.notify_observers()
+            return self
 
         setattr(cl, name, wrapped)
 

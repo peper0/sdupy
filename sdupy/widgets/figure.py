@@ -151,3 +151,11 @@ class Figure(QWidget):
             self.load_axis_state(self.axes.get_xaxis(), state['x_axis'])
         if 'y_axis' in state:
             self.load_axis_state(self.axes.get_yaxis(), state['y_axis'])
+
+
+import matplotlib as mpl
+
+# mpl.rcParams['lines.linewidth'] = 2
+# mpl.rcParams['lines.color'] = 'r'
+mpl.rcParams['image.interpolation'] = 'nearest'
+mpl.rcParams['image.aspect'] = 'equal'

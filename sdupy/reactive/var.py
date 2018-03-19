@@ -141,7 +141,7 @@ def rewrap_args(args, kwargs, args_names, args_as_vars) -> Tuple[List[Any], Dict
             raise ArgumentError(name or str(index)) from exception
 
     def arg_name(index):
-        return args_names[index] if index < len(args_names) else None
+        return args_names[index] if args_names and index < len(args_names) else None
 
     return ([rewrap(index, arg_name(index), arg) for index, arg in enumerate(args)],
             {name: rewrap(None, name, arg) for name, arg in kwargs})

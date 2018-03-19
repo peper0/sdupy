@@ -46,8 +46,11 @@ class DecoratedFunction:
         self.decorator = decorator
         self.factory = factory
         self.callable = func
-        self.signature = inspect.signature(func)
-        self.args_names = list(self.signature.parameters)
+        try:
+            self.signature = inspect.signature(func)
+        except ValueError:
+            self.signature = None
+        self.args_names = list(self.signature.parameters) if self.signature else None
 
     def __call__(self, *args, **kwargs):
         """

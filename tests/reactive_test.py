@@ -280,6 +280,17 @@ class AsyncReactiveWithYield(asynctest.TestCase):
         # self.assertEqual(raw(res), 7)
 
 
+# class Builtin(asynctest.TestCase):
+#     async def test_vars(self):
+#         a = var([1, 2])
+#         l = reactive(len)(a)
+#         self.assertEqual(unwrap(l), 2)
+#
+#         a @= [3]
+#         await wait_for_var(l)
+#         self.assertEqual(unwrap(l), 1)
+
+
 # @reactive(args_fwd_none=['a', 'b'])
 # def none_proof_sum(a, b):
 #     return a + b
