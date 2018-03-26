@@ -50,7 +50,7 @@ class VarsModel(QAbstractTableModel):
     class VarInList(NamedTuple):
         title: str
         var: WrapperInterface
-        notifier: Callable
+        notify_func: Callable
         to_value: Callable[[str], Any]
 
     def __init__(self, parent=None):
@@ -71,7 +71,10 @@ class VarsModel(QAbstractTableModel):
                     if index.column() == 0:
                         return item.title
                     elif index.column() == 1:
-                        return str(unwrap(item.var))
+                        try:
+                            return str(unwrap(item.var))
+                        except Exception as e:
+                            return "{}{}".format(e.__class__, e)
 
     def flags(self, index: QModelIndex):
         if index.row() < len(self.vars):
@@ -115,10 +118,10 @@ class VarsModel(QAbstractTableModel):
                 if var_in_the_list.var == var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
 
-        var.__notifier__.add_observer(notify_changed)
+        var.__notifier__.add_observer(notify_changed, None)
 
         self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
-        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notify_changed, to_value=to_value))
+        self.vars.append(VarsModel.VarInList(title=title, var=var, notify_func=notify_changed, to_value=to_value))
         self.endInsertRows()
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):

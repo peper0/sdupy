@@ -51,6 +51,9 @@ def min_not_none(a, b):
         return min(a, b)
 
 
+all_notifiers = WeakSet()
+
+
 class Notifier:
     class Observer:
         def __init__(self, notifiers):
@@ -60,6 +63,7 @@ class Notifier:
     def __init__(self):
         self._observers = weakref.WeakKeyDictionary()  # type: Dict[NotifyFunc, self.Observer]
         self._priority = 0
+        all_notifiers.add(self)
         #  lowest called first; should be greater than all observed
 
     def notify_observers(self):

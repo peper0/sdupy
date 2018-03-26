@@ -115,7 +115,7 @@ class ForwarderBase:
         """
 
 
-class CommonForwarders(ForwarderBase):
+class ConstForwarders(ForwarderBase):
     def __bool__(self):
         return bool(self._target().__inner__)
 
@@ -129,11 +129,15 @@ class CommonForwarders(ForwarderBase):
         return format(self._target().__inner__, format_spec)
 
 
-add_reactive_forwarders(CommonForwarders, UNARY_OPERATORS + OTHER_NONMODYFING_0ARG)
-add_reactive_forwarders(CommonForwarders, BINARY_OPERATORS + CMP_OPERATORS + OTHER_NONMODYFING_1ARG)
+class MutatingForwarders(ForwarderBase):
+    pass
 
-add_assignop_forwarders(CommonForwarders, ASSIGN_MOD_OPERATORS)
-add_notifying_forwarders(CommonForwarders, OTHER_MODYFING_1ARG + OTHER_MODYFING_2ARG)
+
+add_reactive_forwarders(ConstForwarders, UNARY_OPERATORS + OTHER_NONMODYFING_0ARG)
+add_reactive_forwarders(ConstForwarders, BINARY_OPERATORS + CMP_OPERATORS + OTHER_NONMODYFING_1ARG)
+
+add_assignop_forwarders(ConstForwarders, ASSIGN_MOD_OPERATORS)
+add_notifying_forwarders(MutatingForwarders, OTHER_MODYFING_1ARG + OTHER_MODYFING_2ARG)
 
 
 class Forwarder2:

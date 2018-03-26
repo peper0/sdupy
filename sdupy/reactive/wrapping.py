@@ -18,7 +18,7 @@ def observable_method(unbound_method, observed: Sequence[str], notified: Sequenc
     if isinstance(unbound_method, str):
         unbound_method = forward_by_name(unbound_method)
 
-    @reactive(args_as_vars=[0], dep_only_args=['_additional_deps'])
+    @reactive(pass_args=[0], dep_only_args=['_additional_deps'])
     def wrapped(self, *args, **kwargs):
         res = unbound_method(unwrap(self), *args, **kwargs)
         for observable in notified:

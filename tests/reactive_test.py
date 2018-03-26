@@ -4,7 +4,7 @@ import gc
 import asynctest
 
 from sdupy.reactive import wait_for_var
-from sdupy.reactive.common import WrapperInterface, unwrap, unwrap_exception
+from sdupy.reactive.common import WrapperInterface, unwrap, unwrap_exception, unwrapped
 from sdupy.reactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
@@ -404,6 +404,79 @@ class DepOnlyArgs(asynctest.TestCase):
         await wait_for_var(res)
         self.assertEqual(called_times2, 3)
 
+
+@reactive
+def func_with_default(a, param_with_default=some_observable):
+    global called_times2
+    called_times2 += 1
+    return a + param_with_default
+
+
+class DefaultArgs(asynctest.TestCase):
+    async def setUp(self):
+        global called_times2
+        global some_observable
+        self.var1 = var()
+        some_observable @= 3
+        await wait_for_var()
+        called_times2 = 0
+
+    async def test_with_const_arg(self):
+        global some_observable
+        res = func_with_default(5)
+        self.assertTrue(isinstance(res, WrapperInterface))
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        self.assertEqual(unwrap(res), 8)
+        some_observable @= 100
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 2)
+        self.assertEqual(unwrap(res), 105)
+
+    async def test_with_const_default_arg(self):
+        global some_observable
+        res = func_with_default(5, param_with_default=6)
+        self.assertTrue(isinstance(res, int))
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        some_observable @= 999
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+
+
+@reactive(pass_args=['a'])
+def pass_args(a, b):
+    global called_times2
+    called_times2 += 1
+    return unwrapped(a) + b
+
+
+class PassArgs(asynctest.TestCase):
+    async def setUp(self):
+        global called_times2
+        await wait_for_var()
+        called_times2 = 0
+
+    async def test_1(self):
+        global some_observable
+        a = var(5)
+        b = var(3)
+        res = pass_args(a, b)
+        self.assertTrue(isinstance(res, WrapperInterface))
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        self.assertEqual(unwrap(res), 8)
+        a @= 10
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 1)
+        self.assertEqual(unwrap(res), 8)
+        b @= 100
+        await wait_for_var(res)
+        self.assertEqual(called_times2, 2)
+        self.assertEqual(unwrap(res), 110)
+
+
+# ====================================================================
 
 @reactive
 async def appender(queue: asyncio.Queue):

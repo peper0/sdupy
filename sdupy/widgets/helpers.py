@@ -5,13 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import sdupy
-from .reactive import WrapperInterface
-from .reactive.decorators import reactive
-from .reactive.wrappers.axes import ReactiveAxes
-from .widgets import ComboBox, Figure, Slider, VarsTable
-from .windows import WindowSpec
-
-kept_references = dict()  # Dict[str, Var]
+from sdupy.reactive import Var, WrapperInterface
+from sdupy.reactive.decorators import reactive
+from sdupy.reactive.wrappers.axes import ReactiveAxes
+from sdupy.widgets import ComboBox, Figure, Slider, VarsTable
+from sdupy.windows import WindowSpec
 
 
 def widget(name: str, factory=None, window: WindowSpec = None):
@@ -76,3 +74,12 @@ def input_value_from_list(widget_name: str, choices: List[Union[Any, Tuple[str, 
     if widget.combo.currentIndex() < 0:
         widget.combo.setCurrentIndex(0)
     return widget.data_var
+
+
+def var_from_table(table_name: str, var_name: str, var: WrapperInterface = None, to_value=eval) -> WrapperInterface:
+    assert isinstance(table_name, str)
+    if var is None:
+        var = Var()
+    vars_table = sdupy.window().obtain_widget(table_name, VarsTable)
+    vars_table.insert_var(var_name, var, to_value=to_value)
+    return var

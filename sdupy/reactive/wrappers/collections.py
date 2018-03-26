@@ -1,6 +1,7 @@
-from sdupy.reactive.wrapping import getter, notifying_method
-from ..forwarder import CommonForwarders
+from ..decorators import reactive
+from ..forwarder import ConstForwarders, MutatingForwarders
 from ..var import Wrapper
+from ..wrapping import getter, notifying_method
 
 
 class Sequence(Wrapper):
@@ -31,7 +32,7 @@ class MutableSequence(Sequence):
     reverse = notifying_method('reverse', [''])
 
 
-class List(Wrapper, CommonForwarders):
+class List(Wrapper, MutatingForwarders, ConstForwarders):
     def __init__(self, d: list = None):
         super().__init__(d if d is not None else list())
 
@@ -39,8 +40,8 @@ class List(Wrapper, CommonForwarders):
 
 
 class Dict(Wrapper):
-    def __init__(self, d: dict = None):
-        super().__init__(d if d is not None else dict())
+    def __init__(self, **kwargs):
+        super().__init__(dict(**kwargs))
 
     __contains__ = getter('__contains__', [''])
     __getitem__ = getter('__getitem__', [''])
@@ -60,3 +61,8 @@ class Dict(Wrapper):
     setdefault = notifying_method('setdefault', [''])
     update = notifying_method('update', [''])
     remove = notifying_method('remove', [''])
+
+    @staticmethod
+    @reactive
+    def make(**kwargs):
+        return Dict(**kwargs)

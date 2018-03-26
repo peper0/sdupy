@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import logging
 from contextlib import suppress
 from typing import Any, Callable, NamedTuple
@@ -45,6 +46,7 @@ class AsyncRefresher:
         self.maybe_start_task()
 
     async def run(self):
+        gc.collect()
         update_next = None
 
         with suppress(asyncio.QueueEmpty):  # it's ok - if the queue is empty we just exit
@@ -64,6 +66,7 @@ class AsyncRefresher:
                         await res
                 except Exception as e:
                     logger.exception('ignoring exception when in notifying observer {}'.format(update.func))
+        gc.collect()
 
 
 refresher = None

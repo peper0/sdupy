@@ -4,11 +4,11 @@ import logging
 from abc import abstractmethod
 from contextlib import contextmanager
 from itertools import chain
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from .common import WrapperInterface, is_wrapper, unwrapped
 from .decorators import DecoratedFunction
-from .forwarder import CommonForwarders
+from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier
 
 
@@ -39,7 +39,7 @@ class Wrapper(WrapperInterface):
             return '{}(exception={})'.format(self.__class__.__name__, repr(e))
 
 
-class Constant(WrapperInterface, CommonForwarders):
+class Constant(WrapperInterface, ConstForwarders):
     dummy_notifier = DummyNotifier(priority=0)
 
     def __init__(self, raw):
@@ -73,7 +73,7 @@ class ArgumentError(Exception):
         self.arg_name = arg_name
 
 
-class Var(Wrapper, CommonForwarders):
+class Var(Wrapper, ConstForwarders, MutatingForwarders):
     NOT_INITIALIZED = NotInitializedError()
 
     def __init__(self, raw=NOT_INITIALIZED):
@@ -115,7 +115,7 @@ def is_observable(v):
     Check whether given object should be considered as "observable" i.e. the object that manages notifiers internally
     and returns observable objects from it's methods.
     """
-    return hasattr(v, '__observable__')
+    return hasattr(v, '__notifier__') or hasattr(v, '__observable__')
 
 
 def wrap(v):
@@ -130,25 +130,52 @@ def as_observable(v):
         return wrap(v)
 
 
-def rewrap_args(args, kwargs, args_names, args_as_vars) -> Tuple[List[Any], Dict[str, Any]]:
+class ArgsHelper:
+    def __init__(self, args, kwargs, signature):
+        if signature:
+            # support default parameters
+            bound_args = signature.bind(*args, **kwargs)  # type: inspect.BoundArguments
+            bound_args.apply_defaults()
+            args_names = list(signature.parameters)
+
+            self.args = bound_args.args
+            self.kwargs = bound_args.kwargs
+            self.args_names = args_names[0:len(self.args)]
+            self.args_names += [None] * (len(self.args) - len(self.args_names))
+            self.kwargs_indices = [(args_names.index(name) if name in args_names else None)
+                                   for name in self.kwargs.keys()]
+        else:
+            self.args = args
+            self.kwargs = kwargs
+            self.args_names = [None] * len(self.args)
+            self.kwargs_indices = [None] * len(self.kwargs)
+
+    def iterate_args(self):
+        return ((index, name, arg) for name, (index, arg) in zip(self.args_names, enumerate(self.args)))
+
+    def iterate_kwargs(self):
+        return ((index, name, arg) for index, (name, arg) in zip(self.kwargs_indices, self.kwargs.items()))
+
+
+def rewrap_args(args_helper: ArgsHelper, pass_args) -> Tuple[List[Any], Dict[str, Any]]:
     def rewrap(index, name, arg):
         try:
-            if index in args_as_vars or name in args_as_vars:
-                return as_observable(arg)
+            if index in pass_args or name in pass_args:
+                return arg
             else:
                 return unwrapped(arg)
         except Exception as exception:
             raise ArgumentError(name or str(index)) from exception
 
-    def arg_name(index):
-        return args_names[index] if args_names and index < len(args_names) else None
-
-    return ([rewrap(index, arg_name(index), arg) for index, arg in enumerate(args)],
-            {name: rewrap(None, name, arg) for name, arg in kwargs})
+    return ([rewrap(index, name, arg) for index, name, arg in args_helper.iterate_args()],
+            {name: rewrap(index, name, arg) for index, name, arg in args_helper.iterate_kwargs()})
 
 
 def observe(arg, notify_callback, notifiers):
-    return arg.__notifier__.add_observer(notify_callback, notifiers)
+    if isinstance(arg, Notifier):
+        return arg.add_observer(notify_callback, notifiers)
+    else:
+        return arg.__notifier__.add_observer(notify_callback, notifiers)
 
 
 def maybe_observe(arg, notify_callback, notifiers):
@@ -156,12 +183,13 @@ def maybe_observe(arg, notify_callback, notifiers):
         observe(arg, notify_callback, notifiers)
 
 
-def observe_args(args, kwargs, notify_callback, notifiers):
-    for arg in chain(args, kwargs.values()):
-        maybe_observe(arg, notify_callback, notifiers)
+def observe_args(args_helper: ArgsHelper, pass_args: Set[str], notify_callback, notifiers):
+    for index, name, arg in chain(args_helper.iterate_args(), args_helper.iterate_kwargs()):
+        if index not in pass_args and name not in pass_args:
+            maybe_observe(arg, notify_callback, notifiers)
 
 
-class Proxy(WrapperInterface, CommonForwarders):
+class Proxy(WrapperInterface, ConstForwarders):
     """
     A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
     exactly like the object itself.
@@ -204,7 +232,7 @@ class Proxy(WrapperInterface, CommonForwarders):
     def _unobserve_value(self):
         ref = self._get_ref()
         if ref is not None and hasattr(ref, '__notifier__'):
-            return ref.__notifier__.remove_observer(self)
+            return ref.__notifier__.remove_observer(self._notify_observers)
 
     def _observe_value(self):
         ref = self._get_ref()
@@ -245,7 +273,7 @@ class ReactiveProxy(Proxy):
         # use dep_only_args
         for name in decorated.decorator.dep_only_args:
             if name in kwargs:
-                arg = kwargs[name]
+                arg = kwargs[name]  # fixme use "pop"
                 if hasattr(arg, '__iter__'):
                     for a in arg:
                         observe(a, self._update_ref_holder, self.__notifier__)
@@ -258,24 +286,22 @@ class ReactiveProxy(Proxy):
         for dep in decorated.decorator.other_deps:
             maybe_observe(dep, self._update_ref_holder, self.__notifier__)
 
-        if decorated.signature:
-            # support default parameters
-            bound_args = decorated.signature.bind(*args, **kwargs)  # type: inspect.BoundArguments
-            bound_args.apply_defaults()
-            self.args = bound_args.args
-            self.kwargs = bound_args.kwargs
-        else:
-            self.args = args
-            self.kwargs = kwargs
+        self.args_helper = ArgsHelper(args, kwargs, decorated.signature)
+        self.args = self.args_helper.args
+        self.kwargs = self.args_helper.kwargs
 
-        observe_args(self.args, self.kwargs, self._update_ref_holder, self.__notifier__)
+        observe_args(self.args_helper, self.decorated.decorator.pass_args, self._update_ref_holder, self.__notifier__)
 
     @contextmanager
-    def _handle_exception(self):
+    def _handle_exception(self, reraise):
         try:
             yield
         except Exception as e:
             self._ref.set_exception(e)
+            if reraise:
+                if not isinstance(e, ArgumentError):
+                    # ArgumentError is not re-raised since it was
+                    raise e
 
     def _call(self):
         # returns one of:
@@ -283,26 +309,25 @@ class ReactiveProxy(Proxy):
         # - a coroutine (to be awaited),
         # - a generator to be run once and finalized before the next call
         # - an async generator
-        args, kwargs = rewrap_args(self.args, self.kwargs, self.decorated.args_names,
-                                   self.decorated.decorator.args_as_vars)
+        args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args)
         return self.decorated.callable(*args, **kwargs)
 
     @abstractmethod
-    def _update(self, retval=None):
+    def _update(self, retval=None, reraise=False):
         pass
 
 
 class SyncReactiveProxy(ReactiveProxy):
-    def _update(self, retval=None):
-        with self._handle_exception():
+    def _update(self, retval=None, reraise=False):
+        with self._handle_exception(reraise):
             res = self._call()
             self._set_ref(res)
         return retval
 
 
 class AsyncReactiveProxy(ReactiveProxy):
-    async def _update(self, retval=None):
-        with self._handle_exception():
+    async def _update(self, retval=None, reraise=False):
+        with self._handle_exception(reraise):
             res = await self._call()
             self._set_ref(res)
         return retval
@@ -313,10 +338,10 @@ class CmReactiveProxy(ReactiveProxy):
         super().__init__(*args, **kwargs)
         self.cm = None
 
-    def _update(self, retval=None):
+    def _update(self, retval=None, reraise=False):
         self._cleanup()
 
-        with self._handle_exception():
+        with self._handle_exception(reraise):
             self.cm = self._call()
             res = self.cm.__enter__()
             self._set_ref(res)
@@ -339,10 +364,10 @@ class AsyncCmReactiveProxy(ReactiveProxy):
         super().__init__(*args, **kwargs)
         self.cm = None
 
-    async def _update(self, retval=None):
+    async def _update(self, retval=None, reraise=False):
         await self._cleanup()
 
-        with self._handle_exception():
+        with self._handle_exception(reraise):
             self.cm = self._call()
             res = await self.cm.__aenter__()
             self._set_ref(res)
