@@ -54,6 +54,12 @@ def unwrap_exception(v):
     except Exception as e:
         return e
 
+def unwrap_def(v, val_on_exception = None):
+    try:
+        return v.__inner__
+    except Exception as e:
+        return val_on_exception
+
 
 def unwrapped(v):
     if is_wrapper(v):

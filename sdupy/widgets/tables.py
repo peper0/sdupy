@@ -79,7 +79,7 @@ class VarsModel(QAbstractTableModel):
     def flags(self, index: QModelIndex):
         if index.row() < len(self.vars):
             item = self.vars[index.row()]
-            return super().flags(index) | (Qt.ItemIsEditable if item.to_value else 0)
+            return super().flags(index) | (Qt.ItemIsEditable if hasattr(item.var, 'set') else 0)
         return super().flags(index)
 
     def setData(self, index: QModelIndex, value: Any, role: int):

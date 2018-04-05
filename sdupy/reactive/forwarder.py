@@ -12,7 +12,6 @@ UNARY_OPERATORS = [
     ('__abs__', operator.__abs__),
     ('__invert__', operator.__invert__),
     ('__round__', round),
-    ('__trunc__', trunc),
     ('__floor__', floor),
     ('__ceil__', ceil),
 ]
@@ -118,6 +117,10 @@ class ForwarderBase:
 class ConstForwarders(ForwarderBase):
     def __bool__(self):
         return bool(self._target().__inner__)
+
+    def __trunc__(self):
+        # python raises an exception if __trunc__ returns non-int
+        return int(self._target().__inner__)
 
     def __str__(self):
         return self._target().__inner__.__str__()

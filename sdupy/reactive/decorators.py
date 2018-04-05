@@ -1,6 +1,7 @@
 import asyncio
 import inspect
-from contextlib import contextmanager
+import contextlib
+import functools
 from typing import Callable, Iterable, Union, overload
 
 import asyncio_extras
@@ -51,12 +52,20 @@ class DecoratedFunction:
         except ValueError:
             self.signature = None
         self.args_names = list(self.signature.parameters) if self.signature else None
+        functools.update_wrapper(self, func)
 
     def __call__(self, *args, **kwargs):
         """
         Bind arguments, call function once and schedule it to be called on any arguments change.
         """
         return self.factory(self, args, kwargs)
+
+    def __get__(self, instance, instancetype):
+        """
+        Implement the descriptor protocol to make decorating instance method possible.
+        """
+        return functools.partial(self.__call__, instance)
+
 
 
 @overload
@@ -140,7 +149,7 @@ def reactive_finalizable(pass_args: Iterable[str] = None,
             # noinspection PyTypeChecker
             return deco(ff)
         else:
-            return deco(contextmanager(f))
+            return deco(contextlib.contextmanager(f))
 
     return wrap
 

@@ -30,13 +30,13 @@ class VarData(NamedTuple):
     name: str
     expr: str
     data: Any
-    parent: VarData
-    children: [VarData]
+    parent: 'VarData'
+    children: ['VarData']
 
 
 def _obtain_children(data: Any):
     if isinstance(data, dict):
-        return [VarData(name=key, expr='{}[{}]'.format(data.expr)
+        return [VarData(name=key, expr='{}[{}]'.format(data.expr))
                 for key, value in data.items()]
 
 

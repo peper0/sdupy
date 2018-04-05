@@ -326,6 +326,32 @@ reactive result
 - to jedyne sensowne w przypadku kontrolek jedynie wyświetlających (np. imshow)
 - czasem po prostu mamy wartość i kontrolka może z niej korzystać
 
+## use cases
+- slider (wyświetla jedną liczbę, można nim zmieniać tą liczbę)
+- obrazek (tylko wyświetla, może wyświetlać wiele)
+- wykres (można wyświetlać wiele)
+- tabelka ndarray (wyświetla jedną macierz, można zmieniać)
+- tabelka ze zmiennymi (wyświelta wiele liczb, może zmieniać liczbę)
+- graf (jeden?)
+- drzewo zmiennych
+
+## propozycja
+- każdy helper jest typu input albo display
+- input przyjmuje parametry (np. zakres), zwraca vara, po jego zniszczeniu wszelkie wiązania są niszczone
+- display przyjmuje vara i parametry, wiązania są trzymane dokąd kontrolka istnieje i nikt tego nie nadpisze
+
+
+## ustalenie
+- robimy helpery w module vis
+- jeśli helper coś wyświetla, to bierze var jako parametr
+- jeśli helper pobiera dane ze świata (np. od usera), to zwraca var jako parametr
+- jesli robi obie te rzeczy (np. suwak) to zarówno bierze jak i zwraca var; parametr var jest wtedy opcjonalny; wartość
+zwracana nie musi być bezpośrednio tym varem (może np. na niego proxować), ale zwrócony var musi być setowalny o ile
+setowalny był ten podany
+- jeśli na kontrolce ustawiamy coś kilka razy (var, parametry itp.) to skuteczne jest ostatnie ustawienie
+- jeśli kontrolka może wyświetlać dowolną liczbę rzeczy (np. plot) to identyfikujemy je nazwami (w ramach kontrolki)
+
+
 Integracja:
 Co chcemy osiągnąć:
 - możliwość uruchominia jakiejś częściowej aplikacji

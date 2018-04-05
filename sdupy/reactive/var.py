@@ -189,7 +189,30 @@ def observe_args(args_helper: ArgsHelper, pass_args: Set[str], notify_callback, 
             maybe_observe(arg, notify_callback, notifiers)
 
 
-class Proxy(WrapperInterface, ConstForwarders):
+class Proxy(WrapperInterface, MutatingForwarders):
+    def __init__(self, other_var: WrapperInterface):
+        super().__init__()
+        self._notifier = Notifier()
+        self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
+        self._other_var = other_var
+        self._other_var.__notifier__.add_observer(self._notify_observers, self._notifier)
+
+    @property
+    def __notifier__(self):
+        return self._notifier
+
+    def _target(self):
+        return self._other_var
+
+    @property
+    def __inner__(self):
+        return self._other_var.__inner__
+
+    def __getattr__(self, item):
+        return getattr(self._target().__inner__, item)
+
+
+class SwitchableProxy(WrapperInterface, ConstForwarders):
     """
     A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
     exactly like the object itself.
@@ -246,6 +269,8 @@ class Proxy(WrapperInterface, ConstForwarders):
     # TODO: other forwarders
 
 
+
+
 class HashableCallable:
     def __init__(self, callable, uid):
         self.callable = callable
@@ -264,7 +289,7 @@ class HashableCallable:
         return isinstance(other, HashableCallable) and self.uid == other.uid
 
 
-class ReactiveProxy(Proxy):
+class ReactiveProxy(SwitchableProxy):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
         super().__init__()
         self.decorated = decorated
