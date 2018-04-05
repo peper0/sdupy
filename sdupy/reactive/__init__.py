@@ -15,3 +15,11 @@ def make_tuple(*args):
 
 
 make_dict = reactive(dict)
+
+
+def rewrap_dict(d: dict):
+    @reactive
+    def foo(keys, *values):
+        return {k: v for k, v in zip(keys, values)}
+
+    return foo(d.keys(), *d.values())

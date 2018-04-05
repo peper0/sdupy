@@ -1,6 +1,7 @@
 import weakref
 from _weakrefset import WeakSet
 from typing import Dict, Iterable, Union
+from weakref import WeakKeyDictionary
 
 from sdupy.reactive.common import NotifyFunc
 from sdupy.reactive.refresher import get_default_refresher
@@ -52,25 +53,31 @@ def min_not_none(a, b):
 
 
 all_notifiers = WeakSet()
+stats_for_notify_func = WeakKeyDictionary()  # type: Dict[NotifyFunc, Dict]
 
 
 class Notifier:
     class Observer:
-        def __init__(self, notifiers):
+        def __init__(self, notifiers, notify_func: NotifyFunc, name):
             self.priority = None  # we start from 0, then it can be increased but never decreased
             self.notifiers = WeakSet(notifiers)
+            self.stats = stats_for_notify_func.setdefault(notify_func, dict(name=name))
 
-    def __init__(self):
+    def __init__(self, name):
         self._observers = weakref.WeakKeyDictionary()  # type: Dict[NotifyFunc, self.Observer]
         self._priority = 0
+        self.name = name
+        self.calls = 0
         all_notifiers.add(self)
         #  lowest called first; should be greater than all observed
 
     def notify_observers(self):
+        self.calls += 1
         for notify_func, observer in self._observers.items():
-            get_default_refresher().schedule_call(notify_func, notify_func, observer.priority)
+            get_default_refresher().schedule_call(notify_func, notify_func, observer.priority, observer.stats)
 
-    def add_observer(self, notify_func: NotifyFunc, notifiers: Union['Notifier', Iterable['Notifier'], None]):
+    def add_observer(self, notify_func: NotifyFunc, notifiers: Union['Notifier', Iterable['Notifier'], None],
+                     name=None):
         """
 
         :param notify_func: A callback that will be called (WARNING! it must be owned somewhere else; it's especially
@@ -87,11 +94,15 @@ class Notifier:
             notifiers = []
         if not hasattr(notifiers, '__iter__'):
             notifiers = [notifiers]
-        observer = self.Observer(notifiers)
+        observer = self.Observer(notifiers, notify_func, name or notify_func.__name__)
         self._update_observer_priority(observer)
         self._observers[notify_func] = observer
 
     def _update_observer_priority(self, observer: 'Notifier.Observer'):
+        """
+        Set priorities of all notifers depending on given observer to be greater than ours and save min of them in the
+        observer
+        """
         priority = None
         for notifier in observer.notifiers:
             notifier.priority = max_not_none(notifier.priority, self.priority + 1)

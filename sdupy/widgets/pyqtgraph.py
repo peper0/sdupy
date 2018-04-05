@@ -8,16 +8,20 @@ from ..reactive import reactive_finalizable
 
 
 @register_widget("pyqtgraph figure")
-class PyQtGraphPlot(pg.PlotWidget):
+class PgPlot(pg.PlotWidget):
     pass
 
 
 @register_widget("pyqtgraph view box")
-class PyQtGraphViewBox(pg.GraphicsView):
+class PgViewBox(pg.GraphicsLayoutWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.item = pg.ViewBox()
-        self.setCentralItem(self.item)
+        self.item = self.addViewBox()
+
+
+@register_widget("pyqtgraph layout")
+class PgLayout(pg.GraphicsLayoutWidget):
+    pass
 
 
 HOVER_COLOR = 'blue'
