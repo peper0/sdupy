@@ -2,6 +2,7 @@ import asyncio
 import io
 import traceback
 from typing import Any, Callable, List, NamedTuple
+import gc
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
+from sdupy.utils import ignore_errors
 from .common.register import register_factory, register_widget
 from ..reactive import WrapperInterface, reactive, unwrap
 
@@ -129,6 +131,104 @@ class VarsModel(QAbstractTableModel):
             return "name" if section == 0 else "value"
             # if orientation == Qt.Vertical and role == Qt.DisplayRole:
             #    return self.data.index[section]
+
+
+@register_widget("array table")
+class ArrayTable(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
+
+        self._table_view = QTableView(self)
+        self.layout.addWidget(self._table_view)
+
+        self._model = None
+        self._var = None
+        self._setter = None
+        self._set_current_val(np.array([[]]))
+
+    @property
+    def var(self):
+        return self._var
+
+    @var.setter
+    def var(self, new_var):
+        self._var = new_var
+        self._setter = None
+        gc.collect()
+        self._setter = reactive(self._set_current_val)(self._var)
+
+    def _set_current_val(self, val):
+        self._model = ArrayModel(val, self)
+        self._table_view.setModel(self._model)
+
+
+class ArrayModel(QAbstractTableModel):
+    def __init__(self, array: np.ndarray, parent=None):
+        super().__init__(parent)
+        assert hasattr(array, 'shape')
+        assert hasattr(array, '__getitem__')
+        self._array = array  # type: np.ndarray
+
+        # if array.shape[0]>0:
+        #     self.beginInsertRows(QModelIndex(), 0, array.shape[0]-1)
+        #     self.endInsertRows()
+        #
+        # if array.shape[1]>0:
+        #     self.beginInsertColumns(QModelIndex(), 0, array.shape[1]-1)
+        #     self.endInsertColumns()
+        #
+        #     self.dataChanged.emit(self.index(0, 0), self.index(array.shape[0]-1, array.shape[1]-1))
+
+    @ignore_errors(retval=0)
+    def rowCount(self, parent=None):
+        return self._array.shape[0]
+
+    @ignore_errors(retval=0)
+    def columnCount(self, parent=None):
+        return self._array.shape[1]
+
+    @ignore_errors
+    def data(self, index: QModelIndex, role=Qt.DisplayRole):
+        #print("get data", role)
+        #print("index: ", index.row(), index.column(), role)
+        if self._index_is_good(index):
+            #print("good")
+            if role in [Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.StatusTipRole]:
+                res = str(self._array[index.row(), index.column()])
+                #print("returning", res)
+                return res
+
+
+    @ignore_errors(retval=Qt.ItemFlags())
+    def flags(self, index: QModelIndex):
+        if self._index_is_good(index):
+            return super().flags(index) | (Qt.ItemIsEditable if True else 0)
+        return super().flags(index)
+
+    def _index_is_good(self, index: QModelIndex):
+        #print(self._array.shape)
+        res = (index.isValid()
+               and index.row() < self._array.shape[0]
+               and index.column() < self._array.shape[1])
+        #print("good?", res)
+        return res
+
+    @ignore_errors
+    def setData(self, index: QModelIndex, value: Any, role: int):
+        if self._index_is_good(index):
+            try:
+                self._array[index.row(), index.column()] = eval(value)
+            except Exception as e:
+                logging.exception('exception during setting var (ignoring)')
+            return True
+        return super().setData(index, value, role)
+
+    @ignore_errors
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            return str(section)
 
 
 @register_widget("data_table")

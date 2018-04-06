@@ -7,7 +7,7 @@ from itertools import chain
 from typing import Any, Dict, List, Set, Tuple
 
 from .common import WrapperInterface, is_wrapper, unwrapped
-from .decorators import DecoratedFunction
+from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier
 
@@ -57,6 +57,11 @@ class Constant(WrapperInterface, ConstForwarders):
     def _target(self):
         return self
 
+    #Not sure whether we should simply forward it
+    def __getattr__(self, item):
+        return getattr(self._target().__inner__, item)
+
+
 
 def const(raw):
     return Constant(raw)
@@ -104,6 +109,12 @@ class Var(Wrapper, ConstForwarders, MutatingForwarders):
         """
         self.set(other)
         return self
+
+    #Not sure whether we should simply forward it
+    def __getattr__(self, item):
+        #print('getattr', repr(self), item)
+        return getattr(self._target().__inner__, item)
+
 
 
 def var(raw=Var.NOT_INITIALIZED):
@@ -262,9 +273,11 @@ class SwitchableProxy(WrapperInterface, ConstForwarders):
         if ref is not None and hasattr(ref, '__notifier__'):
             return ref.__notifier__.add_observer(self._notify_observers, self._notifier)
 
+    @reactive
     def __getattr__(self, item):
         # FIXME: optional proxying result (if returned value is proxy)
-        return getattr(self._target().__inner__, item)
+        #return getattr(self._target().__inner__, item)
+        return getattr(self, item)
 
     # TODO: other forwarders
 

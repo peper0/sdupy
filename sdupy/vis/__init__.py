@@ -1,17 +1,20 @@
 
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, Sequence, Optional
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from PyQt5.QtWidgets import QGraphicsItem
 
 import sdupy
 from sdupy.reactive import Var, WrapperInterface
 from sdupy.reactive.decorators import reactive
-from sdupy.reactive.var import Proxy
 from sdupy.reactive.wrappers.axes import ReactiveAxes
-from sdupy.widgets import ComboBox, Figure, Slider, VarsTable
+from ._helpers import image_to_rgb, pg_hold_item, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
+from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
+from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
+
+global_refs = {}
 
 
 def widget(name: str, factory=None, window: WindowSpec = None):
@@ -20,22 +23,11 @@ def widget(name: str, factory=None, window: WindowSpec = None):
 
 
 # TODO: add option for name=None that returns the last axes used or the new one (if none was used yet)
-def axes(name: str, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Axes]:
+def mpl_axes(name: str, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Axes]:
     return ReactiveAxes(widget(name, Figure, window=window).axes)
 
 
-@reactive
-def image_to_rgb(image: np.ndarray, is_bgr=True):
-    if is_bgr and len(image.shape) == 3:
-        if image.shape[2] == 3:
-            return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        elif image.shape[2] == 4:
-            return cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
-    return image
-
-
-@reactive
-def show_image_mpl(name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
+def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
     """
     :param name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
@@ -43,12 +35,40 @@ def show_image_mpl(name: str, image: np.ndarray, is_bgr=True, window=None, **kwa
                     otherwise)
     :return:
     """
+    ax = mpl_axes(name=widget_name, window=window)
+    image_name = kwargs.get('label')
+    global_refs[(ax.__inner__, image_name)] = ax.imshow(image_to_rgb(image, is_bgr), **kwargs)
 
-    return axes(name=name, window=window).imshow(image_to_rgb(image, is_bgr), **kwargs)
+
+@reactive
+def draw_pg(widget_name: str, label, items: Sequence[QGraphicsItem], window=None):
+    from sdupy.widgets.pyqtgraph import PgPlot
+    w = widget(widget_name, PgPlot, window=window)
+
+    global_refs[(w, label)] = pg_hold_items(w.item, items)
 
 
-imshow = show_image_mpl
-display_image = show_image_mpl
+@reactive
+def image_pg(widget_name: str, image: Optional[np.ndarray], is_bgr=True, window=None, label=None, **kwargs):
+    items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
+    draw_pg(widget_name, ('__image__', label), items)
+
+
+@reactive
+def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
+    from sdupy.widgets.pyqtgraph import PyQtGraphImage
+
+    w = widget(widget_name, PyQtGraphImage, window=window)
+    w.imageItem.setAutoDownsample(True)
+    global_refs[(w, '__image__')] = reactive(w.setImage)(image_to_pg(image, is_bgr, False),  #FIXME why no flip here?
+                                                     autoRange=False,
+                                                     autoLevels=False,
+                                                     levels=levels_for(image),
+                                                     )
+
+
+imshow = image_mpl
+display_image = image_mpl
 
 
 def clear_variables(widget_name: str):
@@ -56,10 +76,7 @@ def clear_variables(widget_name: str):
     vars_table.clear()
 
 
-global_refs = {}
-
-
-def slider(widget_name: str, var: WrapperInterface, min, max, step=1, window=None):
+def slider(widget_name: str, var: WrapperInterface, *, min, max, step=1, window=None):
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var
@@ -67,7 +84,22 @@ def slider(widget_name: str, var: WrapperInterface, min, max, step=1, window=Non
     return w.var
 
 
-def var_in_table(widget_name: str, var_name: str, var: WrapperInterface, to_value=eval, window=None):
+def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], window=None):
+    w = widget(widget_name, ComboBox, window)
+    global_refs[(w, 'set_choices')] = reactive(w.set_choices)(choices)
+    # if widget.combo.currentIndex() < 0:
+    #     widget.combo.setCurrentIndex(0)
+    return widget.data_var
+
+
+def checkbox(widget_name: str, var: WrapperInterface=None, *, window=None):
+    w = widget(widget_name, CheckBox, window)
+    if var is not None:
+        w.var = var
+    return w.var
+
+
+def var_in_table(widget_name: str, var_name: str, var: WrapperInterface, *, to_value=eval, window=None):
     assert isinstance(widget_name, str)
     var = var if var is not None else Var()  # fixme: check if there is already such a var
     vars_table = widget(widget_name, VarsTable, window)
@@ -75,9 +107,9 @@ def var_in_table(widget_name: str, var_name: str, var: WrapperInterface, to_valu
     return var
 
 
-def combo(widget_name: str, choices: List[Union[Any, Tuple[str, Any]]], window=None):
-    w = widget(widget_name, ComboBox, window)
-    global_refs[(w, 'set_choices')] = reactive(w.set_choices)(choices)
-    # if widget.combo.currentIndex() < 0:
-    #     widget.combo.setCurrentIndex(0)
-    return widget.data_var
+def array_table(widget_name: str, var: WrapperInterface=None, *, window=None):
+    w = widget(widget_name, ArrayTable, window)
+    if var is None:
+        var = sdupy.var(np.zeros((2, 3)))  # fixme
+    w.var = var
+    return w.var

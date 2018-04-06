@@ -91,6 +91,10 @@ class MainWindow(QMainWindow):
                                                    factory_name=factory_name)
         self.addDockWidget(Qt.RightDockWidgetArea, docked)
 
+    def remove_widget(self, widget_name):
+        self.removeDockWidget(self.widgets[widget_name].dock_widget)
+        del self.widgets[widget_name]
+
     def obtain_widget(self, name, factory_or_name):
         if name not in self.widgets:
             if isinstance(factory_or_name, str):

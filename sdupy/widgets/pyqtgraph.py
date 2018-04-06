@@ -16,9 +16,24 @@ class PyQtGraphPlot(pg.PlotWidget):
 class PyQtGraphViewBox(pg.GraphicsView):
     def __init__(self, parent):
         super().__init__(parent)
-        self.item = pg.ViewBox()
+        self.item = pg.ViewBox(lockAspect=True)
         self.setCentralItem(self.item)
 
+@register_widget("pyqtgraph plot")
+class PgPlot(pg.GraphicsView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.item = pg.PlotItem(lockAspect=True)
+        self.item.setAspectLocked(True)
+        self.setCentralItem(self.item)
+
+@register_widget("pyqtgraph image view")
+class PyQtGraphImage(pg.ImageView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.view.setAspectLocked(True)
+        #self.item = pg.ViewBox()
+        #self.setCentralItem(self.item)
 
 HOVER_COLOR = 'blue'
 

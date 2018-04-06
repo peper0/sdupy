@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import contextlib
 import functools
+import logging
 from typing import Callable, Iterable, Union, overload
 
 import asyncio_extras
@@ -64,6 +65,8 @@ class DecoratedFunction:
         """
         Implement the descriptor protocol to make decorating instance method possible.
         """
+        if instance is None:
+            logging.error("instance is None")
         return functools.partial(self.__call__, instance)
 
 
