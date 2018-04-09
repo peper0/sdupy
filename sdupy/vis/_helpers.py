@@ -17,13 +17,7 @@ def image_to_rgb(image: np.ndarray, is_bgr=True):
 
 
 @reactive_finalizable
-def pg_hold_item(pg_parent, item):
-    pg_parent.addItem(item)
-    yield
-    pg_parent.removeItem(item)
-
-@reactive_finalizable
-def pg_hold_items(pg_parent, items):
+def pg_hold_items(pg_parent, *items):
     for item in items:
         pg_parent.addItem(item)
     yield

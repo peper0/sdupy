@@ -9,12 +9,11 @@ import sdupy
 from sdupy.reactive import Var, WrapperInterface
 from sdupy.reactive.decorators import reactive
 from sdupy.reactive.wrappers.axes import ReactiveAxes
-from ._helpers import image_to_rgb, pg_hold_item, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
+from sdupy.vis.globals import global_refs
+from ._helpers import image_to_rgb, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
-
-global_refs = {}
 
 
 def widget(name: str, factory=None, window: WindowSpec = None):
@@ -40,31 +39,29 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     global_refs[(ax.__inner__, image_name)] = ax.imshow(image_to_rgb(image, is_bgr), **kwargs)
 
 
-@reactive
-def draw_pg(widget_name: str, label, items: Sequence[QGraphicsItem], window=None):
+def draw_pg(widget_name: str, label, items: Sequence[WrapperInterface[QGraphicsItem]], window=None):
     from sdupy.widgets.pyqtgraph import PgPlot
     w = widget(widget_name, PgPlot, window=window)
 
-    global_refs[(w, label)] = pg_hold_items(w.item, items)
+    global_refs[(w, label)] = pg_hold_items(w.item, *items)
 
 
-@reactive
 def image_pg(widget_name: str, image: Optional[np.ndarray], is_bgr=True, window=None, label=None, **kwargs):
+    print("image_pg")
     items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
     draw_pg(widget_name, ('__image__', label), items)
 
 
-@reactive
 def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PyQtGraphImage
 
     w = widget(widget_name, PyQtGraphImage, window=window)
     w.imageItem.setAutoDownsample(True)
     global_refs[(w, '__image__')] = reactive(w.setImage)(image_to_pg(image, is_bgr, False),  #FIXME why no flip here?
-                                                     autoRange=False,
-                                                     autoLevels=False,
-                                                     levels=levels_for(image),
-                                                     )
+                                                         autoRange=False,
+                                                         autoLevels=False,
+                                                         levels=levels_for(image),
+                                                         )
 
 
 imshow = image_mpl

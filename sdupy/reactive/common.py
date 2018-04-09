@@ -1,6 +1,6 @@
 import asyncio
 from abc import abstractmethod
-from typing import Callable, Coroutine, Union
+from typing import Callable, Coroutine, Union, Generic, TypeVar
 
 
 def ensure_coro_func(f):
@@ -19,7 +19,9 @@ MaybeAsyncFunction = Union[Callable, CoroutineFunction]
 NotifyFunc = Union[Callable[[], None], Callable[[], Coroutine]]
 
 
-class WrapperInterface:
+T = TypeVar('T')
+
+class WrapperInterface(Generic[T]):
     @property
     @abstractmethod
     def __notifier__(self):
@@ -30,7 +32,7 @@ class WrapperInterface:
 
     @property
     @abstractmethod
-    def __inner__(self):
+    def __inner__(self) -> T:
         """
         Return the object that is wrapped.
         It's usually a raw non observable object, however inside "Proxy" it's used to hold a reference to any object (possibly other Proxy or other wrapper)
@@ -43,7 +45,7 @@ def is_wrapper(v):
     return isinstance(v, WrapperInterface)
 
 
-def unwrap(v):
+def unwrap(v: WrapperInterface[T]) -> T:
     return v.__inner__
 
 
@@ -54,6 +56,7 @@ def unwrap_exception(v):
     except Exception as e:
         return e
 
+
 def unwrap_def(v, val_on_exception = None):
     try:
         return v.__inner__
@@ -61,7 +64,7 @@ def unwrap_def(v, val_on_exception = None):
         return val_on_exception
 
 
-def unwrapped(v):
+def unwrapped(v: Union[T, WrapperInterface[T]]) -> T:
     if is_wrapper(v):
         return unwrap(v)
     else:
