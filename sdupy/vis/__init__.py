@@ -6,7 +6,7 @@ import numpy as np
 from PyQt5.QtWidgets import QGraphicsItem
 
 import sdupy
-from sdupy.reactive import Var, WrapperInterface
+from sdupy.reactive import Var, Wrapped
 from sdupy.reactive.decorators import reactive
 from sdupy.reactive.wrappers.axes import ReactiveAxes
 from sdupy.vis.globals import global_refs
@@ -39,7 +39,7 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     global_refs[(ax.__inner__, image_name)] = ax.imshow(image_to_rgb(image, is_bgr), **kwargs)
 
 
-def draw_pg(widget_name: str, label, items: Sequence[WrapperInterface[QGraphicsItem]], window=None):
+def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], window=None):
     from sdupy.widgets.pyqtgraph import PgPlot
     w = widget(widget_name, PgPlot, window=window)
 
@@ -73,7 +73,7 @@ def clear_variables(widget_name: str):
     vars_table.clear()
 
 
-def slider(widget_name: str, var: WrapperInterface, *, min, max, step=1, window=None):
+def slider(widget_name: str, var: Wrapped, *, min, max, step=1, window=None):
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var
@@ -89,14 +89,14 @@ def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], windo
     return widget.data_var
 
 
-def checkbox(widget_name: str, var: WrapperInterface=None, *, window=None):
+def checkbox(widget_name: str, var: Wrapped=None, *, window=None):
     w = widget(widget_name, CheckBox, window)
     if var is not None:
         w.var = var
     return w.var
 
 
-def var_in_table(widget_name: str, var_name: str, var: WrapperInterface, *, to_value=eval, window=None):
+def var_in_table(widget_name: str, var_name: str, var: Wrapped, *, to_value=eval, window=None):
     assert isinstance(widget_name, str)
     var = var if var is not None else Var()  # fixme: check if there is already such a var
     vars_table = widget(widget_name, VarsTable, window)
@@ -104,7 +104,7 @@ def var_in_table(widget_name: str, var_name: str, var: WrapperInterface, *, to_v
     return var
 
 
-def array_table(widget_name: str, var: WrapperInterface=None, *, window=None):
+def array_table(widget_name: str, var: Wrapped=None, *, window=None):
     w = widget(widget_name, ArrayTable, window)
     if var is None:
         var = sdupy.var(np.zeros((2, 3)))  # fixme

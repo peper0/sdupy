@@ -6,13 +6,13 @@ from contextlib import contextmanager
 from itertools import chain
 from typing import Any, Dict, List, Set, Tuple
 
-from .common import WrapperInterface, is_wrapper, unwrapped
+from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier
 
 
-class Wrapper(WrapperInterface):
+class Wrapper(Wrapped):
     def __init__(self, raw=None):
         self._notifier = Notifier()
         self._exception = None  # type: Exception
@@ -39,7 +39,7 @@ class Wrapper(WrapperInterface):
             return '{}(exception={})'.format(self.__class__.__name__, repr(e))
 
 
-class Constant(WrapperInterface, ConstForwarders):
+class Constant(Wrapped, ConstForwarders):
     dummy_notifier = DummyNotifier(priority=0)
 
     def __init__(self, raw):
@@ -200,8 +200,8 @@ def observe_args(args_helper: ArgsHelper, pass_args: Set[str], notify_callback, 
             maybe_observe(arg, notify_callback, notifiers)
 
 
-class Proxy(WrapperInterface, MutatingForwarders):
-    def __init__(self, other_var: WrapperInterface):
+class Proxy(Wrapped, MutatingForwarders):
+    def __init__(self, other_var: Wrapped):
         super().__init__()
         self._notifier = Notifier()
         self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
@@ -223,7 +223,7 @@ class Proxy(WrapperInterface, MutatingForwarders):
         return getattr(self._target().__inner__, item)
 
 
-class SwitchableProxy(WrapperInterface, ConstForwarders):
+class SwitchableProxy(Wrapped, ConstForwarders):
     """
     A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
     exactly like the object itself.

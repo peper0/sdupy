@@ -4,7 +4,7 @@ import gc
 import asynctest
 
 from sdupy.reactive import wait_for_var
-from sdupy.reactive.common import WrapperInterface, unwrap, unwrap_exception, unwrapped
+from sdupy.reactive.common import Wrapped, unwrap, unwrap_exception, unwrapped
 from sdupy.reactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
@@ -61,14 +61,14 @@ class SimpleReactive(asynctest.TestCase):
         a = var(2)
         res = my_sum(a, 5)
         await wait_for_var(res)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_val_keyword(self):
         a = var(2)
         res = my_sum(a=a, b=5)
         await wait_for_var(res)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_var(self):
@@ -76,7 +76,7 @@ class SimpleReactive(asynctest.TestCase):
         b = var(5)
         res = my_sum(a=a, b=b)
         await wait_for_var(res)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_changes(self):
@@ -115,20 +115,20 @@ class SimpleReactiveAsync(asynctest.TestCase):
     async def test_var_val_positional(self):
         a = var(2)
         res = await async_sum(a, 5)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_val_keyword(self):
         a = var(2)
         res = await async_sum(a=a, b=5)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_var(self):
         a = var(2)
         b = var(5)
         res = await async_sum(a=a, b=b)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
 
     async def test_var_changes(self):
@@ -179,7 +179,7 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_with_raw(self):
         res = sum_with_yield(2, 5)
         # in this case we must return something that finalizes the function when destroyed
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
         self.assertEqual(inside, 1)
         await wait_for_var(res)
@@ -192,7 +192,7 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = var(5)
         res = sum_with_yield(2, b=b)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
         gc.collect()
         self.assertEqual(inside, 1)
@@ -216,7 +216,7 @@ class ReactiveWithYield(asynctest.TestCase):
     async def test_exception_propagation(self):
         b = var()
         res = sum_with_yield(2, b=b)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         await wait_for_var(res)
         gc.collect()
         self.assertEqual(inside, 0)
@@ -254,7 +254,7 @@ class AsyncReactiveWithYield(asynctest.TestCase):
     async def test_a(self):
         b = var(5)
         res = await async_sum_with_yield(2, b=b)
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         self.assertEqual(unwrap(res), 7)
         self.assertEqual(inside, 1)
         b @= 1
@@ -266,7 +266,7 @@ class AsyncReactiveWithYield(asynctest.TestCase):
 
     async def test_exception_propagation(self):
         b = var()
-        res = await async_sum_with_yield(2, b=b)  # type: WrapperInterface
+        res = await async_sum_with_yield(2, b=b)  # type: Wrapped
         await wait_for_var(res)
         self.assertEqual(inside, 0)
         self.assertIsNotNone(unwrap_exception(res))
@@ -424,7 +424,7 @@ class DefaultArgs(asynctest.TestCase):
     async def test_with_const_arg(self):
         global some_observable
         res = func_with_default(5)
-        self.assertTrue(isinstance(res, WrapperInterface))
+        self.assertTrue(isinstance(res, Wrapped))
         await wait_for_var(res)
         self.assertEqual(called_times2, 1)
         self.assertEqual(unwrap(res), 8)
@@ -462,7 +462,7 @@ class PassArgs(asynctest.TestCase):
         a = var(5)
         b = var(3)
         res = pass_args(a, b)
-        self.assertTrue(isinstance(res, WrapperInterface))
+        self.assertTrue(isinstance(res, Wrapped))
         await wait_for_var(res)
         self.assertEqual(called_times2, 1)
         self.assertEqual(unwrap(res), 8)
@@ -501,7 +501,7 @@ class Task(asynctest.TestCase):
         queue = asyncio.Queue()
         res = await var_from_gen(appender(queue))
 
-        self.assertIsInstance(res, WrapperInterface)
+        self.assertIsInstance(res, Wrapped)
         await asyncio.sleep(0)
         self.assertEqual(unwrap(res), [])
         await queue.put(5)

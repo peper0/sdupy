@@ -1,11 +1,11 @@
 from PyQt5.QtCore import QObject
 
-from sdupy.reactive.common import WrapperInterface
+from sdupy.reactive.common import Wrapped
 from sdupy.reactive.forwarder import ConstForwarders, MutatingForwarders
 from sdupy.reactive.notifier import Notifier
 
 
-class QtPropertyVar(WrapperInterface, ConstForwarders, MutatingForwarders):
+class QtPropertyVar(Wrapped, ConstForwarders, MutatingForwarders):
     def __init__(self, obj: QObject, prop_name: str):
         super().__init__()
         self._notifier = Notifier()

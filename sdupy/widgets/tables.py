@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
 from sdupy.utils import ignore_errors
 from .common.register import register_factory, register_widget
-from ..reactive import WrapperInterface, reactive, unwrap
+from ..reactive import Wrapped, reactive, unwrap
 
 
 @register_widget("generic table")
@@ -51,7 +51,7 @@ class VarsTable(Table):
 class VarsModel(QAbstractTableModel):
     class VarInList(NamedTuple):
         title: str
-        var: WrapperInterface
+        var: Wrapped
         notify_func: Callable
         to_value: Callable[[str], Any]
 
@@ -111,7 +111,7 @@ class VarsModel(QAbstractTableModel):
             self.vars.clear()
             self.endRemoveRows()
 
-    def insert_var(self, title: str, var: WrapperInterface, to_value: Callable[[str], Any]):
+    def insert_var(self, title: str, var: Wrapped, to_value: Callable[[str], Any]):
         assert var is not None
         self.remove_var(title)
 

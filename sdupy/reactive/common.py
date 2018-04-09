@@ -21,7 +21,7 @@ NotifyFunc = Union[Callable[[], None], Callable[[], Coroutine]]
 
 T = TypeVar('T')
 
-class WrapperInterface(Generic[T]):
+class Wrapped(Generic[T]):
     @property
     @abstractmethod
     def __notifier__(self):
@@ -42,10 +42,10 @@ class WrapperInterface(Generic[T]):
 
 
 def is_wrapper(v):
-    return isinstance(v, WrapperInterface)
+    return isinstance(v, Wrapped)
 
 
-def unwrap(v: WrapperInterface[T]) -> T:
+def unwrap(v: Wrapped[T]) -> T:
     return v.__inner__
 
 
@@ -64,7 +64,7 @@ def unwrap_def(v, val_on_exception = None):
         return val_on_exception
 
 
-def unwrapped(v: Union[T, WrapperInterface[T]]) -> T:
+def unwrapped(v: Union[T, Wrapped[T]]) -> T:
     if is_wrapper(v):
         return unwrap(v)
     else:
