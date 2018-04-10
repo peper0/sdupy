@@ -135,6 +135,8 @@ class VarsModel(QAbstractTableModel):
 
 @register_widget("array table")
 class ArrayTable(QWidget):
+    DEFAULT_FORMAT = '{}'  # '{:.3g}' is good for floats, but there can be a nonfloat
+
     def __init__(self, parent):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
@@ -143,10 +145,12 @@ class ArrayTable(QWidget):
         self._table_view = QTableView(self)
         self.layout.addWidget(self._table_view)
 
+        self._format = self.DEFAULT_FORMAT
         self._model = None
         self._var = None
         self._setter = None
         self._set_current_val(np.array([[]]))
+
 
     @property
     def var(self):
@@ -157,10 +161,23 @@ class ArrayTable(QWidget):
         self._var = new_var
         self._setter = None
         gc.collect()
+        self.update()
+
+    @property
+    def format(self):
+        return self._format
+
+    @format.setter
+    def format(self, format_):
+        self._format = format_ or self.DEFAULT_FORMAT
+        self.update()
+
+    def update(self):
         self._setter = reactive(self._set_current_val)(self._var)
 
     def _set_current_val(self, val):
         self._model = ArrayModel(val, self)
+        self._model.format = self._format
         self._table_view.setModel(self._model)
 
 
@@ -170,6 +187,7 @@ class ArrayModel(QAbstractTableModel):
         assert hasattr(array, 'shape')
         assert hasattr(array, '__getitem__')
         self._array = array  # type: np.ndarray
+        self.format = None
 
         # if array.shape[0]>0:
         #     self.beginInsertRows(QModelIndex(), 0, array.shape[0]-1)
@@ -191,12 +209,15 @@ class ArrayModel(QAbstractTableModel):
 
     @ignore_errors
     def data(self, index: QModelIndex, role=Qt.DisplayRole):
+        assert self.format is not None
+        assert isinstance(self.format, str)
         #print("get data", role)
         #print("index: ", index.row(), index.column(), role)
         if self._index_is_good(index):
             #print("good")
             if role in [Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.StatusTipRole]:
-                res = str(self._array[index.row(), index.column()])
+                #print("foramt:", self.format)
+                res = self.format.format(self._array[index.row(), index.column()])
                 #print("returning", res)
                 return res
 

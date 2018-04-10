@@ -1,8 +1,11 @@
+from math import isfinite
 from typing import Any, Mapping, Tuple
 
 import networkx as nx
 import pyqtgraph as pg
+from PyQt5.QtCore import QPointF
 
+from sdupy.utils import ignore_errors
 from . import register_widget
 from ..reactive import reactive_finalizable
 
@@ -27,13 +30,54 @@ class PgPlot(pg.GraphicsView):
         self.item.setAspectLocked(True)
         self.setCentralItem(self.item)
 
+
 @register_widget("pyqtgraph image view")
 class PyQtGraphImage(pg.ImageView):
     def __init__(self, parent):
         super().__init__(parent)
         self.view.setAspectLocked(True)
-        #self.item = pg.ViewBox()
-        #self.setCentralItem(self.item)
+        self._show_cursor_proxy = None
+        self.cursor_pos_label = None
+        self.show_cursor_pos()
+
+    def show_cursor_pos(self, show=True):
+        if self._show_cursor_proxy:
+            self._show_cursor_proxy.disconnect()
+            self._show_cursor_proxy = None
+        if self.cursor_pos_label is not None:
+            self.removeItem(self.cursor_pos_label)
+            self.cursor_pos_label = None
+
+        if show:
+            @ignore_errors
+            def mouseMoved(evt):
+                mouse_point = self.view.mapSceneToView(evt[0])
+                ix = int(mouse_point.x())
+                iy = int(mouse_point.y())
+                if 0 <= ix < self.image.shape[0] and 0 <= iy < self.image.shape[1]:
+                    val = self.image[ix, iy]
+                else:
+                    val = None
+                self.cursor_pos_label.setText(
+                    "x,y = ({:0.2f}, {:0.2f})\nval = {}".format(mouse_point.x(), mouse_point.y(), val))
+                if all(isfinite(c) for c in [mouse_point.x(), mouse_point.y()]):
+                    self.cursor_pos_label.setPos(mouse_point)
+                else:
+                    self.cursor_pos_label.setPos(QPointF(0, 0))
+
+            self.cursor_pos_label = pg.TextItem(anchor=(0, 1))
+            self.addItem(self.cursor_pos_label)
+
+        self._show_cursor_proxy = pg.SignalProxy(self.scene.sigMouseMoved, rateLimit=60, slot=mouseMoved)
+
+    def dump_state(self):
+        return dict(
+            view_state=self.getView().getState(),
+        )
+
+    def load_state(self, state: dict):
+        if 'view_state' in state:
+            self.getView().setState(state['view_state'])
 
 HOVER_COLOR = 'blue'
 

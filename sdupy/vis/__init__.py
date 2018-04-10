@@ -60,7 +60,8 @@ def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, 
     global_refs[(w, '__image__')] = reactive(w.setImage)(image_to_pg(image, is_bgr, False),  #FIXME why no flip here?
                                                          autoRange=False,
                                                          autoLevels=False,
-                                                         levels=levels_for(image),
+                                                         #levels=levels_for(image),
+                                                         autoHistogramRange=True
                                                          )
 
 
@@ -104,9 +105,11 @@ def var_in_table(widget_name: str, var_name: str, var: Wrapped, *, to_value=eval
     return var
 
 
-def array_table(widget_name: str, var: Wrapped=None, *, window=None):
+def array_table(widget_name: str, var: Wrapped=None, *, format:str=None, window=None):
     w = widget(widget_name, ArrayTable, window)
     if var is None:
         var = sdupy.var(np.zeros((2, 3)))  # fixme
     w.var = var
+    if format is not None:
+        w.format = format
     return w.var
