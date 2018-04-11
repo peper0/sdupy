@@ -57,12 +57,27 @@ def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, 
 
     w = widget(widget_name, PyQtGraphImage, window=window)
     w.imageItem.setAutoDownsample(True)
+    set_image_args = kwargs
+    set_image_args.setdefault('autoRange', False)
+    set_image_args.setdefault('autoLevels', False)
+    set_image_args.setdefault('autoHistogramRange', True)
+    # levels=levels_for(image),
     global_refs[(w, '__image__')] = reactive(w.setImage)(image_to_pg(image, is_bgr, False),  #FIXME why no flip here?
-                                                         autoRange=False,
-                                                         autoLevels=False,
-                                                         #levels=levels_for(image),
-                                                         autoHistogramRange=True
-                                                         )
+                                                         **set_image_args)
+
+
+def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):
+    from sdupy.widgets.pyqtgraph import PyQtGraphImage
+
+    w = widget(widget_name, PyQtGraphImage, window=window)
+    w.imageItem.setAutoDownsample(True)
+    set_image_args = kwargs
+    set_image_args.setdefault('axes', dict(t=0, y=1, x=2))
+    set_image_args.setdefault('autoRange', False)
+    set_image_args.setdefault('autoLevels', False)
+    set_image_args.setdefault('autoHistogramRange', True)
+    # levels=levels_for(image),
+    global_refs[(w, '__image__')] = reactive(w.setImage)(image, **set_image_args)
 
 
 imshow = image_mpl

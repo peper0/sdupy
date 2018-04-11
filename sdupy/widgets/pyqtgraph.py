@@ -52,12 +52,12 @@ class PyQtGraphImage(pg.ImageView):
             @ignore_errors
             def mouseMoved(evt):
                 mouse_point = self.view.mapSceneToView(evt[0])
-                ix = int(mouse_point.x())
-                iy = int(mouse_point.y())
-                if 0 <= ix < self.image.shape[0] and 0 <= iy < self.image.shape[1]:
-                    val = self.image[ix, iy]
-                else:
-                    val = None
+                val = None
+                if self.image is not None:
+                    ix = int(mouse_point.x())
+                    iy = int(mouse_point.y())
+                    if 0 <= ix < self.image.shape[0] and 0 <= iy < self.image.shape[1]:
+                        val = self.image[ix, iy]
                 self.cursor_pos_label.setText(
                     "x,y = ({:0.2f}, {:0.2f})\nval = {}".format(mouse_point.x(), mouse_point.y(), val))
                 if all(isfinite(c) for c in [mouse_point.x(), mouse_point.y()]):
