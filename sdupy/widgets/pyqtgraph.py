@@ -22,6 +22,8 @@ class PyQtGraphViewBox(pg.GraphicsView):
         self.item = pg.ViewBox(lockAspect=True)
         self.setCentralItem(self.item)
 
+
+
 @register_widget("pyqtgraph plot")
 class PgPlot(pg.GraphicsView):
     def __init__(self, parent):
@@ -30,6 +32,15 @@ class PgPlot(pg.GraphicsView):
         self.item.setAspectLocked(True)
         self.setCentralItem(self.item)
 
+
+def index_to_str(index):
+    res = []
+    for i in index:
+        if isinstance(i, slice):
+            res.append("{}:{}".format(i.start if i.start is not None else "", i.stop if i.stop is not None else ""))
+        else:
+            res.append(str(i))
+    return ','.join(res)
 
 @register_widget("pyqtgraph image view")
 class PyQtGraphImage(pg.ImageView):
@@ -52,14 +63,19 @@ class PyQtGraphImage(pg.ImageView):
             @ignore_errors
             def mouseMoved(evt):
                 mouse_point = self.view.mapSceneToView(evt[0])
-                val = None
-                if self.image is not None:
+                text = "x,y = ({:0.2f}, {:0.2f})".format(mouse_point.x(), mouse_point.y())
+                if self.image is not None and 'x' in self.axes and 'y' in self.axes:
                     ix = int(mouse_point.x())
                     iy = int(mouse_point.y())
-                    if 0 <= ix < self.image.shape[0] and 0 <= iy < self.image.shape[1]:
-                        val = self.image[ix, iy]
-                self.cursor_pos_label.setText(
-                    "x,y = ({:0.2f}, {:0.2f})\nval = {}".format(mouse_point.x(), mouse_point.y(), val))
+                    if 0 <= ix < self.image.shape[self.axes['x']] and 0 <= iy < self.image.shape[self.axes['y']]:
+                        index = [slice(None, None)] * len(self.image.shape)
+                        index[self.axes['x']] = ix
+                        index[self.axes['y']] = iy
+                        if self.axes.get('t') is not None:
+                            index[self.axes['t']] = self.currentIndex
+                        val = self.image[tuple(index)]
+                        text += "\ndata[{}] = {}".format(index_to_str(index), val)
+                self.cursor_pos_label.setText(text)
                 if all(isfinite(c) for c in [mouse_point.x(), mouse_point.y()]):
                     self.cursor_pos_label.setPos(mouse_point)
                 else:

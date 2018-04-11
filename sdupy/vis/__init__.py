@@ -3,6 +3,7 @@ from typing import Any, List, Tuple, Union, Sequence, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
+from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtWidgets import QGraphicsItem
 
 import sdupy
@@ -49,35 +50,37 @@ def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], wi
 def image_pg(widget_name: str, image: Optional[np.ndarray], is_bgr=True, window=None, label=None, **kwargs):
     print("image_pg")
     items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
-    draw_pg(widget_name, ('__image__', label), items)
+    draw_pg(widget_name, ('__image__', label), items, window=window)
 
 
-def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
+def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, extent=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PyQtGraphImage
 
     w = widget(widget_name, PyQtGraphImage, window=window)
-    w.imageItem.setAutoDownsample(True)
-    set_image_args = kwargs
-    set_image_args.setdefault('autoRange', False)
-    set_image_args.setdefault('autoLevels', False)
-    set_image_args.setdefault('autoHistogramRange', True)
+    @reactive
+    def set_image(image: np.ndarray, is_bgr=True, extent=None, **kwargs):
+        set_image_args = kwargs
+        set_image_args.setdefault('autoRange', False)
+        set_image_args.setdefault('autoLevels', False)
+        set_image_args.setdefault('autoHistogramRange', True)
+        set_image_args.setdefault('axes', dict(y=0, x=1))
+        axes = set_image_args['axes']
+        if len(image.shape) == 3 and not ('t' in axes or 'c' in axes):
+            #FIXME hack, what about rgb images?
+            image = image[:, :, 0]
+        w.setImage(image, **set_image_args)
+        if extent is not None:
+            xmin, xmax, ymin, ymax = extent
+            w.imageItem.setRect(QRectF(QPointF(xmin, ymin), QPointF(xmax, ymax)))
+        #w.imageItem.setAutoDownsample(True)
+
     # levels=levels_for(image),
-    global_refs[(w, '__image__')] = reactive(w.setImage)(image_to_pg(image, is_bgr, False),  #FIXME why no flip here?
-                                                         **set_image_args)
+    global_refs[(w, '__image__')] = set_image(image, is_bgr, extent, **kwargs)
 
 
 def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):
-    from sdupy.widgets.pyqtgraph import PyQtGraphImage
+    return image_pg_adv(widget_name, image, window, axes=dict(t=0, y=1, x=2), **kwargs)
 
-    w = widget(widget_name, PyQtGraphImage, window=window)
-    w.imageItem.setAutoDownsample(True)
-    set_image_args = kwargs
-    set_image_args.setdefault('axes', dict(t=0, y=1, x=2))
-    set_image_args.setdefault('autoRange', False)
-    set_image_args.setdefault('autoLevels', False)
-    set_image_args.setdefault('autoHistogramRange', True)
-    # levels=levels_for(image),
-    global_refs[(w, '__image__')] = reactive(w.setImage)(image, **set_image_args)
 
 
 imshow = image_mpl
