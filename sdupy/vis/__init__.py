@@ -47,18 +47,19 @@ def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], wi
     global_refs[(w, label)] = pg_hold_items(w.item, *items)
 
 
-def image_pg(widget_name: str, image: Optional[np.ndarray], is_bgr=True, window=None, label=None, **kwargs):
+def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, **kwargs):
     print("image_pg")
-    items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
+    #items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
+    items = [make_pg_image_item(image, **kwargs)] if image is not None else []
     draw_pg(widget_name, ('__image__', label), items, window=window)
 
 
-def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, extent=None, **kwargs):
+def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PyQtGraphImage
 
     w = widget(widget_name, PyQtGraphImage, window=window)
     @reactive
-    def set_image(image: np.ndarray, is_bgr=True, extent=None, **kwargs):
+    def set_image(image: np.ndarray, extent=None, **kwargs):
         set_image_args = kwargs
         set_image_args.setdefault('autoRange', False)
         set_image_args.setdefault('autoLevels', False)
@@ -75,7 +76,7 @@ def image_pg_adv(widget_name: str, image: np.ndarray, is_bgr=True, window=None, 
         #w.imageItem.setAutoDownsample(True)
 
     # levels=levels_for(image),
-    global_refs[(w, '__image__')] = set_image(image, is_bgr, extent, **kwargs)
+    global_refs[(w, '__image__')] = set_image(image, extent, **kwargs)
 
 
 def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):

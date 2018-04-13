@@ -84,4 +84,5 @@ class ReactiveAxes(Wrapper):
     get_ylim = getter(plt.Axes.get_xlim, ['xlim'])
     set_ylim = reactive_setter(plt.Axes.set_xlim, ['xlim'])
 
-    # TODO: rest from https://matplotlib.org/api/axes_api.html#plotting
+    def legend(self, *args, **kwargs):
+        return self.__inner__.legend(*args, **kwargs)

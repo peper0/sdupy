@@ -45,7 +45,7 @@ def index_to_str(index):
 @register_widget("pyqtgraph image view")
 class PyQtGraphImage(pg.ImageView):
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, view=pg.PlotItem())
         self.view.setAspectLocked(True)
         self._show_cursor_proxy = None
         self.cursor_pos_label = None
@@ -62,7 +62,7 @@ class PyQtGraphImage(pg.ImageView):
         if show:
             @ignore_errors
             def mouseMoved(evt):
-                mouse_point = self.view.mapSceneToView(evt[0])
+                mouse_point = self.view.vb.mapSceneToView(evt[0])
                 text = "x,y = ({:0.2f}, {:0.2f})".format(mouse_point.x(), mouse_point.y())
                 if self.image is not None and 'x' in self.axes and 'y' in self.axes:
                     ix = int(mouse_point.x())
@@ -88,12 +88,21 @@ class PyQtGraphImage(pg.ImageView):
 
     def dump_state(self):
         return dict(
-            view_state=self.getView().getState(),
+            #view_state=self.getView().getState(),
+            view_state=self.getView().saveState(),
+            colormap=self.getHistogramWidget().gradient.saveState(),
+            colormap_region=self.getHistogramWidget().region.getRegion()
         )
 
     def load_state(self, state: dict):
         if 'view_state' in state:
-            self.getView().setState(state['view_state'])
+            #self.getView().setState(state['view_state'])
+            self.getView().restoreState(state['view_state'])
+        if 'colormap' in state:
+            self.getHistogramWidget().gradient.restoreState(state['colormap'])
+        if 'colormap_region' in state:
+            self.getHistogramWidget().region.setRegion(state['colormap_region'])
+
 
 HOVER_COLOR = 'blue'
 

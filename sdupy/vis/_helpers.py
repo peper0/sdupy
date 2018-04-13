@@ -51,12 +51,12 @@ def levels_for(image: np.ndarray):
 
 @reactive
 def make_pg_image_item(image, extent=None, **kwargs):
-    item = ImageItem(image,
-                     autoRange=False,
-                     autoLevels=False,
-                     levels=levels_for(image),
-                     **kwargs
-                     )
+    image_args = kwargs
+    image_args.setdefault('autoRange', False)
+    image_args.setdefault('autoLevels', False)
+    image_args.setdefault('axisOrder', 'row-major')
+    image_args.setdefault('levels', levels_for(image))
+    item = ImageItem(image, **image_args)
     if extent is not None:
         xmin, xmax, ymin, ymax = extent
         item.setRect(QRectF(QPointF(xmin, ymin), QPointF(xmax, ymax)))
