@@ -40,6 +40,13 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     global_refs[(ax.__inner__, image_name)] = ax.imshow(image_to_rgb(image, is_bgr), **kwargs)
 
 
+def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
+    ax = mpl_axes(name=widget_name, window=window)
+    plot_name = kwargs.get('label')
+    plot = getattr(ax, plot_fn)
+    global_refs[(ax.__inner__, plot_name)] = plot(*args, **kwargs)
+
+
 def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], window=None):
     from sdupy.widgets.pyqtgraph import PgPlot
     w = widget(widget_name, PgPlot, window=window)
