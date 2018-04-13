@@ -62,11 +62,12 @@ class PyQtGraphImage(pg.ImageView):
         if show:
             @ignore_errors
             def mouseMoved(evt):
-                mouse_point = self.view.vb.mapSceneToView(evt[0])
-                text = "x,y = ({:0.2f}, {:0.2f})".format(mouse_point.x(), mouse_point.y())
+                view_point = self.view.vb.mapSceneToView(evt[0])
+                text = "x,y = ({:0.2f}, {:0.2f})".format(view_point.x(), view_point.y())
                 if self.image is not None and 'x' in self.axes and 'y' in self.axes:
-                    ix = int(mouse_point.x())
-                    iy = int(mouse_point.y())
+                    item_point = self.imageItem.mapFromScene(evt[0])
+                    ix = int(item_point.x())
+                    iy = int(item_point.y())
                     if 0 <= ix < self.image.shape[self.axes['x']] and 0 <= iy < self.image.shape[self.axes['y']]:
                         index = [slice(None, None)] * len(self.image.shape)
                         index[self.axes['x']] = ix
@@ -76,8 +77,8 @@ class PyQtGraphImage(pg.ImageView):
                         val = self.image[tuple(index)]
                         text += "\ndata[{}] = {}".format(index_to_str(index), val)
                 self.cursor_pos_label.setText(text)
-                if all(isfinite(c) for c in [mouse_point.x(), mouse_point.y()]):
-                    self.cursor_pos_label.setPos(mouse_point)
+                if all(isfinite(c) for c in [view_point.x(), view_point.y()]):
+                    self.cursor_pos_label.setPos(view_point)
                 else:
                     self.cursor_pos_label.setPos(QPointF(0, 0))
 
