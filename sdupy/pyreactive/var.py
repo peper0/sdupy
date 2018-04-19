@@ -72,7 +72,11 @@ class NotInitializedError(Exception):
         super().__init__('not initialized')
 
 
+# FIXME: rename to "propagate error"
 class ArgumentError(Exception):
+    """
+    An exception that is silently propagated and not raised unless explicit unwrapping is done on the variable.
+    """
     def __init__(self, arg_name):
         super().__init__("propagating exception from arg '{}'".format(arg_name))
         self.arg_name = arg_name

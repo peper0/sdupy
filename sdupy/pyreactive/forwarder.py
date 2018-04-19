@@ -3,7 +3,7 @@ from abc import abstractmethod
 from functools import wraps
 from math import ceil, floor, trunc
 
-from sdupy.reactive.wrapping import add_assignop_forwarders, add_notifying_forwarders, add_reactive_forwarders
+from sdupy.pyreactive.wrapping import add_assignop_forwarders, add_notifying_forwarders, add_reactive_forwarders
 from .decorators import reactive
 
 UNARY_OPERATORS = [

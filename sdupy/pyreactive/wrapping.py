@@ -1,6 +1,6 @@
 from typing import Any, Callable, Iterable, Sequence, Tuple
 
-from sdupy.reactive.common import unwrap
+from sdupy.pyreactive.common import unwrap
 from .decorators import reactive
 from .notifier import Notifier
 

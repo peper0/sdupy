@@ -2,8 +2,8 @@ import weakref
 from _weakrefset import WeakSet
 from typing import Dict, Iterable, Union
 
-from sdupy.reactive.common import NotifyFunc
-from sdupy.reactive.refresher import get_default_refresher
+from sdupy.pyreactive.common import NotifyFunc
+from sdupy.pyreactive.refresher import get_default_refresher
 
 
 def is_hashable(v):

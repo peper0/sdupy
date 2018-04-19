@@ -7,7 +7,7 @@ from typing import Callable, Iterable, Union, overload
 
 import asyncio_extras
 
-from sdupy.reactive.common import CoroutineFunction, is_wrapper
+from sdupy.pyreactive.common import CoroutineFunction, is_wrapper
 
 
 class Reactive:

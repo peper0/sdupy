@@ -13,7 +13,7 @@ from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 from sdupy.utils import ignore_errors
 from stitching.progress import Progress
 from . import register_widget
-from ..reactive import reactive_finalizable
+from ..pyreactive import reactive_finalizable
 
 
 @register_widget("pyqtgraph figure")

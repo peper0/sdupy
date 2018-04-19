@@ -1,8 +1,8 @@
 from PyQt5.QtCore import QObject
 
-from sdupy.reactive.common import Wrapped
-from sdupy.reactive.forwarder import ConstForwarders, MutatingForwarders
-from sdupy.reactive.notifier import Notifier
+from sdupy.pyreactive.common import Wrapped
+from sdupy.pyreactive.forwarder import ConstForwarders, MutatingForwarders
+from sdupy.pyreactive.notifier import Notifier
 
 
 class QtPropertyVar(Wrapped, ConstForwarders, MutatingForwarders):

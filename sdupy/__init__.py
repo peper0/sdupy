@@ -10,10 +10,10 @@ sip.setapi("QVariant", 2)
 from .integration.auto import install as install_mainloop  # it must be before the others, since it removes some hacks
 from .main_window import MainWindow
 from .windows import window
-#from .widgets.helpers import input_value_from_list, input_value_from_range, display_image, display_variable, axes, \
+#from .widgets.helpers import input_value_from_list, vis.slider, display_image, vis.var_in_table, axes, \
 #    imshow, \
 #    var_from_table
-from .reactive import var, const, reactive, reactive_finalizable, unwrap
+from .pyreactive import var, const, reactive, reactive_finalizable, unwrap
 
 # fixme: ability to disable this
 install_mainloop()

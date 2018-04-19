@@ -3,8 +3,8 @@ from math import ceil, log10
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 
-from sdupy.reactive import Var, reactive
-from sdupy.reactive.common import unwrap_def, unwrap
+from sdupy.pyreactive import Var, reactive
+from sdupy.pyreactive.common import unwrap_def, unwrap
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
 

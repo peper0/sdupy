@@ -4,7 +4,7 @@ import logging
 from contextlib import suppress
 from typing import Any, Callable, NamedTuple
 
-from sdupy.reactive.common import NotifyFunc
+from sdupy.pyreactive.common import NotifyFunc
 
 logger = logging.getLogger('refresher')
 

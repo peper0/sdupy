@@ -7,9 +7,9 @@ from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtWidgets import QGraphicsItem
 
 import sdupy
-from sdupy.reactive import Var, Wrapped
-from sdupy.reactive.decorators import reactive
-from sdupy.reactive.wrappers.axes import ReactiveAxes
+from sdupy.pyreactive import Var, Wrapped
+from sdupy.pyreactive.decorators import reactive
+from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.vis._helpers import make_graph_item_pg
 from sdupy.vis.globals import global_refs
 from ._helpers import image_to_rgb, image_to_pg, make_pg_image_item, levels_for, pg_hold_items

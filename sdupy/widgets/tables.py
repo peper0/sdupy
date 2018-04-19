@@ -10,9 +10,10 @@ from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
+from sdupy.pyreactive import unwrap_exception
 from sdupy.utils import ignore_errors
 from .common.register import register_factory, register_widget
-from ..reactive import Wrapped, reactive, unwrap
+from ..pyreactive import Wrapped, reactive, unwrap
 
 
 @register_widget("generic table")

@@ -2,8 +2,8 @@ from typing import List, Union, Any, Tuple
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QComboBox
 
-from sdupy import reactive
-from sdupy.widgets import register_widget, QtPropertyVar
+from ..pyreactive import reactive
+from . import register_widget, QtPropertyVar
 
 
 @register_widget("selector")
