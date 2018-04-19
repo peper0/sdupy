@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QCheckBox, QVBoxLayout, QWidget
 from .common.qt_property_var import QtPropertyVar
 from .common.register import register_widget, registered_factories
 from .figure import Figure
-from .pyqtgraph import PyQtGraphPlot, PyQtGraphViewBox, display_graph2
+from .pyqtgraph import PyQtGraphPlot, PyQtGraphViewBox
 from .slider import Slider
 # from .console import make_console
 from .tables import PandasTable, VarsTable, ArrayTable

@@ -60,31 +60,39 @@ class VarsModel(QAbstractTableModel):
         super().__init__(parent)
         self.vars = []  # type: List[VarsModel.VarInList]
 
+    @ignore_errors
     def rowCount(self, parent=None):
         return len(self.vars)
 
     def columnCount(self, parent=None):
         return 2
 
+    @ignore_errors
     def data(self, index: QModelIndex, role=Qt.DisplayRole):
         if index.isValid():
             if index.row() < len(self.vars):
                 item = self.vars[index.row()]
-                if role == Qt.DisplayRole or role == Qt.EditRole:
+                if role == Qt.DisplayRole or role == Qt.EditRole or role == Qt.ToolTipRole:
                     if index.column() == 0:
                         return item.title
                     elif index.column() == 1:
                         try:
                             return str(unwrap(item.var))
                         except Exception as e:
-                            return "{}{}".format(e.__class__, e)
+                            return "{}\n{}".format(e.__class__, e)
+                if role == Qt.BackgroundColorRole:
+                    exception = unwrap_exception(item.var)
+                    if exception is not None:
+                        return QColor('red')
 
+    @ignore_errors
     def flags(self, index: QModelIndex):
         if index.row() < len(self.vars):
             item = self.vars[index.row()]
             return super().flags(index) | (Qt.ItemIsEditable if hasattr(item.var, 'set') else 0)
         return super().flags(index)
 
+    @ignore_errors
     def setData(self, index: QModelIndex, value: Any, role: int):
         if index.isValid():
             if index.row() < len(self.vars):
@@ -118,7 +126,7 @@ class VarsModel(QAbstractTableModel):
 
         async def notify_changed():
             for i, var_in_the_list in enumerate(self.vars):
-                if var_in_the_list.var == var:
+                if var_in_the_list.var is var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
 
         var.__notifier__.add_observer(notify_changed, None)
@@ -127,6 +135,7 @@ class VarsModel(QAbstractTableModel):
         self.vars.append(VarsModel.VarInList(title=title, var=var, notify_func=notify_changed, to_value=to_value))
         self.endInsertRows()
 
+    @ignore_errors
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return "name" if section == 0 else "value"

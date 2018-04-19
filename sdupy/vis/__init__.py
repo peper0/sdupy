@@ -12,7 +12,7 @@ from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.vis._helpers import make_graph_item_pg
 from sdupy.vis.globals import global_refs
-from ._helpers import image_to_rgb, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
+from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
@@ -28,6 +28,9 @@ def mpl_axes(name: str, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Ax
     return ReactiveAxes(widget(name, Figure, window=window).axes)
 
 
+axes = mpl_axes
+
+
 def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
     """
     :param name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
@@ -38,7 +41,13 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     """
     ax = mpl_axes(name=widget_name, window=window)
     image_name = kwargs.get('label')
-    global_refs[(ax.__inner__, image_name)] = ax.imshow(image_to_rgb(image, is_bgr), **kwargs)
+    print('================shape', image.shape)
+    i = ax.imshow(image_to_mpl(image, is_bgr), **kwargs)
+    global_refs[(ax.__inner__, image_name)] = i
+    return i
+
+
+imshow = image_mpl
 
 
 def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
@@ -99,8 +108,17 @@ def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
     return items[0]
 
 
-imshow = image_mpl
-display_image = image_mpl
+graph = graph_pg
+
+
+def data_tree_pg(widget_name: str, tree, window=None, **kwargs):
+    from sdupy.widgets.pyqtgraph import PgDataTree
+    w = widget(widget_name, PgDataTree, window=window)
+
+    global_refs[(w)] = reactive(w.setData)(tree)
+
+
+data_tree = data_tree_pg
 
 
 def clear_variables(widget_name: str):
@@ -108,7 +126,7 @@ def clear_variables(widget_name: str):
     vars_table.clear()
 
 
-def slider(widget_name: str, var: Wrapped, *, min, max, step=1, window=None):
+def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, window=None):
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var
@@ -121,7 +139,7 @@ def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], windo
     global_refs[(w, 'set_choices')] = reactive(w.set_choices)(choices)
     # if widget.combo.currentIndex() < 0:
     #     widget.combo.setCurrentIndex(0)
-    return widget.data_var
+    return w.data_var
 
 
 def checkbox(widget_name: str, var: Wrapped=None, *, window=None):

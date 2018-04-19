@@ -18,7 +18,7 @@ class ComboBox(QWidget):
 
         self.title_var = QtPropertyVar(self.combo, 'currentText')
         self.index_var = QtPropertyVar(self.combo, 'currentIndex')
-        self.data_var = reactive()(lambda x: self.combo.currentData())(self.index_var)
+        self.data_var = reactive(lambda x: self.combo.currentData())(self.index_var)
 
     def set_choices(self, choices: List[Union[Any, Tuple[str, Any]]]):
         self.combo.clear()
