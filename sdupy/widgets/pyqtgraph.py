@@ -1,11 +1,17 @@
+import asyncio
+import logging
 from math import isfinite
 from typing import Any, Mapping, Tuple
 
 import networkx as nx
 import pyqtgraph as pg
 from PyQt5.QtCore import QPointF
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar
+from pyqtgraph.parametertree import Parameter, ParameterItem
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
 from sdupy.utils import ignore_errors
+from stitching.progress import Progress
 from . import register_widget
 from ..reactive import reactive_finalizable
 
@@ -173,3 +179,156 @@ def display_graph2(g: nx.Graph, widget: pg.GraphicsWidget, pos: Mapping[Any, Tup
         patch.remove()
     ax.figure.canvas.draw_idle()
     # , ax.add_collection(PatchCollection(node_collection))
+
+
+class PathParameterItem(WidgetParameterItem):
+    def __init__(self, param, depth):
+        param.opts['type'] = 'str'
+        super().__init__(param, depth)
+
+    def makeWidget(self):
+        # opts = self.param.opts
+        widget = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        widget.setLayout(layout)
+        textbox = super().makeWidget()
+        layout.addWidget(textbox)
+        button = QPushButton('Browse...')
+        #button.setFixedWidth(20)
+        #button.setFixedHeight(20)
+
+        layout.addWidget(button)
+        button.clicked.connect(self.browse)
+
+        #widget.setMaximumHeight(20)  ## set to match height of spin box and line edit
+        widget.sigChanged = textbox.sigChanged
+        widget.value = textbox.value
+        widget.setValue = textbox.setValue
+        self.widget = widget
+        return widget
+
+
+    @ignore_errors
+    def browse(self, xx):
+        file_dialog = QFileDialog()
+        self.widget.setValue(file_dialog.getExistingDirectory(directory=self.widget.value()))
+
+
+class PathParameter(Parameter):
+    itemClass = PathParameterItem
+
+
+class TaskParameterItem(ParameterItem):
+    def __init__(self, param, depth):
+        super().__init__(param, depth)
+        self.layoutWidget = QWidget()
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(2)
+
+        self.start_stop_button = QPushButton()
+        self.start_stop_button.setFixedHeight(20)
+        self.start_stop_button.setFixedWidth(48)
+        self.layout.addWidget(self.start_stop_button)
+        self.start_stop_button.clicked.connect(self.buttonClicked)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(20)
+        self.layout.addWidget(self.progress_bar)
+
+        self.layoutWidget.setLayout(self.layout)
+        #self.layout.addStretch()
+        #param.sigNameChanged.connect(self.paramRenamed)
+        #self.setText(0, '')
+        self.param.sigValueChanged.connect(self.refresh)
+        self.refresh(param, None)
+
+
+    @ignore_errors
+    def treeWidgetChanged(self):
+        super().treeWidgetChanged()
+        tree = self.treeWidget()
+        if tree is None:
+            return
+
+        #tree.setFirstItemColumnSpanned(self, True)
+        tree.setItemWidget(self, 1, self.layoutWidget)
+
+    # def paramRenamed(self, param, name):
+    #     self.start_stop_button.setText(name)
+
+    def buttonClicked(self):
+        self.param.start_or_stop()
+
+    @ignore_errors
+    def refresh(self, param, val):
+        self.progress_bar.setMaximum(1000)
+        progress = param.progress_tracker
+        task = param.task
+        if progress is None or task is None:
+            self.progress_bar.setValue(0)
+            self.progress_bar.setFormat('')
+            self.start_stop_button.setText('start')
+        elif task.done():
+            if task is None:
+                self.progress_bar.setFormat('')
+            elif task.cancelled():
+                self.progress_bar.setFormat('cancelled')
+            elif task.exception():
+                self.progress_bar.setFormat('error: ' + str(task.exception()))
+                logging.exception('task finished with error')
+            else:
+                self.progress_bar.setValue(1000)
+                self.progress_bar.setFormat('finished')
+            self.start_stop_button.setText('start')
+        else:
+            self.progress_bar.setFormat('%p% {}'.format(progress._current_status))
+            self.progress_bar.setValue(progress._progress*1000)
+            self.start_stop_button.setText('cancel')
+        print("aa", param)
+
+
+class TaskParameter(Parameter):
+    """Used for displaying a button within the tree."""
+    itemClass = TaskParameterItem
+
+    # TODO: replace with some better control
+    def __init__(self, func=None, **opts):
+        super().__init__(**opts)
+        self.func = func
+        self.task = None  # type: asyncio.Task
+        #self.progress_param = self.addChild(dict(name="progress", type='float', readonly=True, value=0))
+        #self.state_param = self.addChild(dict(name="state", type='str', readonly=True, value=0))
+        #self.result_param = self.addChild(dict(name="result", type='text', readonly=True))
+
+        self.progress_tracker = None
+
+    @ignore_errors
+    def start_or_stop(self):
+        if self.task is not None and not self.task.done():
+            self.task.cancel()
+        else:
+            self.task = asyncio.ensure_future(self.run_task())
+
+    async def run_task(self):
+        print("starting")
+        self.progress_tracker = Progress()
+        self.sigValueChanged.emit(self, None)
+        refresher = asyncio.ensure_future(self.show_progress())
+        await asyncio.sleep(0.001)
+        await self.func(self.progress_tracker)
+        #self.progress_param.setValue(999)
+        #await refresher
+        print("finished")
+
+    async def show_progress(self):
+        try:
+            while True:
+                await asyncio.sleep(0.1)
+                self.sigValueChanged.emit(self, None)
+                if self.task.done():
+                    return
+        except:
+            logging.exception("error in show_progress")
