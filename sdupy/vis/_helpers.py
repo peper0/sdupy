@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from pyqtgraph import ImageItem
+from pyqtgraph import ImageItem, GraphItem
 
 from sdupy import reactive, reactive_finalizable
 
@@ -61,4 +61,15 @@ def make_pg_image_item(image, extent=None, **kwargs):
         xmin, xmax, ymin, ymax = extent
         item.setRect(QRectF(QPointF(xmin, ymin), QPointF(xmax, ymax)))
     item.setAutoDownsample(True)
+    return item
+
+
+@reactive
+def make_graph_item_pg(pos, adj, **kwargs):
+    pos = np.asarray(pos)
+    assert len(pos.shape) == 2 and pos.shape[1] == 2
+    adj = np.array(adj, dtype=int)
+    assert len(adj.shape) == 2
+    item = GraphItem(pos=pos, adj=adj, **kwargs)
+    item.generatePicture()  # trigger exceptions that may occur here (and would be raised inside "paint" method)
     return item

@@ -10,6 +10,7 @@ import sdupy
 from sdupy.reactive import Var, Wrapped
 from sdupy.reactive.decorators import reactive
 from sdupy.reactive.wrappers.axes import ReactiveAxes
+from sdupy.vis._helpers import make_graph_item_pg
 from sdupy.vis.globals import global_refs
 from ._helpers import image_to_rgb, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
@@ -89,6 +90,13 @@ def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, 
 def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):
     return image_pg_adv(widget_name, image, window, axes=dict(t=0, y=1, x=2), **kwargs)
 
+
+def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
+    print("image_pg")
+    #items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
+    items = [make_graph_item_pg(pos, adj, **kwargs)]
+    draw_pg(widget_name, ('__graph__', label), items, window=window)
+    return items[0]
 
 
 imshow = image_mpl
