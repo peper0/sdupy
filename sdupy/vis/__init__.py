@@ -10,7 +10,7 @@ import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
-from sdupy.vis._helpers import make_graph_item_pg
+from sdupy.vis._helpers import make_graph_item_pg, set_zvalue
 from sdupy.vis.globals import global_refs
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
@@ -57,18 +57,18 @@ def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
     global_refs[(ax.__inner__, plot_name)] = plot(*args, **kwargs)
 
 
-def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], window=None):
+def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zvalue=None, window=None):
     from sdupy.widgets.pyqtgraph import PgPlot
     w = widget(widget_name, PgPlot, window=window)
 
-    global_refs[(w, label)] = pg_hold_items(w.item, *items)
+    global_refs[(w, label)] = pg_hold_items(w.item, *items, zvalue=zvalue)
 
 
-def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, **kwargs):
+def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
     print("image_pg")
     #items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
     items = [make_pg_image_item(image, **kwargs)] if image is not None else []
-    draw_pg(widget_name, ('__image__', label), items, window=window)
+    draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
 def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, **kwargs):

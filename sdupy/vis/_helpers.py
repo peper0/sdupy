@@ -35,8 +35,10 @@ def image_to_mpl(image: np.ndarray, is_bgr=True):
 
 
 @reactive_finalizable
-def pg_hold_items(pg_parent, *items):
+def pg_hold_items(pg_parent, *items, zvalue=None):
     for item in items:
+        if zvalue is not None:
+            item.setZValue(zvalue)
         pg_parent.addItem(item)
     yield
     for item in items:
