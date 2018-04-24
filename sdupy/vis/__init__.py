@@ -11,11 +11,11 @@ from pyqtgraph.parametertree import ParameterTree, Parameter
 import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
-from sdupy.pyreactive.forwarder import MutatingForwarders, ConstForwarders
 from sdupy.pyreactive.notifier import Notifier
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg
 from sdupy.vis.globals import global_refs
+from sdupy.widgets.common.qt_property_var import QtSignaledVar
 from sdupy.widgets.pyqtgraph import PgParamTree, PgPlot, TaskParameter
 from stitching.progress import Progress
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
@@ -117,7 +117,7 @@ def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
 graph = graph_pg
 
 
-def plot_pg(widget_name: str, label=None, *args, window=None, **kwargs):
+def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     w = widget(widget_name, PgPlot, window=window)
     global_refs[(w, label)] = make_plot_item_pg(w.item, *args, **kwargs)
 
@@ -221,39 +221,16 @@ def param_in_paramtree(widget_name: str, param_path: Sequence[str], param, *, wi
     _paramtree_add_child(parent, param)
 
 
-class PgParamVar(Wrapped, ConstForwarders, MutatingForwarders):
+class PgParamVar(QtSignaledVar):
     def __init__(self, param: Parameter):
-        super().__init__()
-        self._notifier = Notifier()
+        super().__init__(param.sigValueChanged)
         self.param = param
-        param.sigValueChanged.connect(self._prop_changed)
-
-    def _prop_changed(self):
-        self._notifier.notify_observers()
 
     def set(self, value):
         self.param.setValue(value)
 
     def get(self):
         return self.param.value()
-
-    def _target(self):
-        return self
-
-    @property
-    def __notifier__(self):
-        return self._notifier
-
-    @property
-    def __inner__(self):
-        return self.get()
-
-    @__inner__.setter
-    def __inner__(self, value):
-        return self.set(value)
-
-    def __str__(self):
-        return "PgParamVar({})".format(self.get())
 
 
 def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):

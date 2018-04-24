@@ -31,12 +31,20 @@ class PyQtGraphViewBox(pg.GraphicsView):
 
 
 
-@register_widget("pyqtgraph plot")
-class PgPlot(pg.GraphicsView):
+@register_widget("pyqtgraph image")
+class PgFigure(pg.GraphicsView):
     def __init__(self, parent):
         super().__init__(parent)
         self.item = pg.PlotItem(lockAspect=True)
         self.item.setAspectLocked(True)
+        self.setCentralItem(self.item)
+
+
+@register_widget("pyqtgraph plot")
+class PgPlot(pg.GraphicsView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.item = pg.PlotItem()
         self.setCentralItem(self.item)
 
 
@@ -48,6 +56,7 @@ def index_to_str(index):
         else:
             res.append(str(i))
     return ','.join(res)
+
 
 @register_widget("pyqtgraph image view")
 class PyQtGraphImage(pg.ImageView):
@@ -226,7 +235,6 @@ class TaskParameterItem(ParameterItem):
             self.progress_bar.setFormat('%p% {}'.format(progress._current_status))
             self.progress_bar.setValue(progress._progress*1000)
             self.start_stop_button.setText('cancel')
-        print("aa", param)
 
 
 class TaskParameter(Parameter):
@@ -252,7 +260,7 @@ class TaskParameter(Parameter):
             self.task = asyncio.ensure_future(self.run_task())
 
     async def run_task(self):
-        print("starting")
+        #print("starting")
         self.progress_tracker = Progress()
         self.sigValueChanged.emit(self, None)
         refresher = asyncio.ensure_future(self.show_progress())
@@ -260,7 +268,7 @@ class TaskParameter(Parameter):
         await self.func(self.progress_tracker)
         #self.progress_param.setValue(999)
         #await refresher
-        print("finished")
+        #print("finished")
 
     async def show_progress(self):
         try:

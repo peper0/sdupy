@@ -95,7 +95,7 @@ def make_graph_item_pg(pos, adj, **kwargs):
     return item
 
 
-@reactive
+@reactive_finalizable
 def make_plot_item_pg(plot_item: PlotItem, *args, **kwargs):
     item = plot_item.plot(*args, **kwargs)
     yield item
