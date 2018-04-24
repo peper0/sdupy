@@ -5,8 +5,21 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 
 from sdupy.pyreactive import Var, reactive
 from sdupy.pyreactive.common import unwrap_def, unwrap
+from sdupy.pyreactive.var import NotInitializedError
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
+
+
+def set_if_inequal(var_to_set, new_value):
+    try:
+        print("{} is {}".format(repr(var_to_set), var_to_set.__inner__))
+        if var_to_set.__inner__ == new_value:
+            return
+    except NotInitializedError:
+        pass
+    print("setting {} to {}".format(repr(var_to_set), new_value))
+    var_to_set.__inner__ = new_value
+
 
 
 @register_widget("slider")
@@ -38,25 +51,22 @@ class Slider(QWidget):
         self._max = None
 
         self.var = Var()
-        self.refs = [self._set_vals((val,), val)
-                     for val in [self._spin_val, self._slider_val]]
+        self.refs = [
+            self._set_all_to(self._spin_val),
+            self._set_all_to(self._slider_val/self._slider_mult)
+        ]
 
     def _uses_integer(self):
         return isinstance(self._slider_mult, int)
 
     @reactive
-    def _set_vals(self, source_tup, value):
-        source, = source_tup
-        if source is self._slider_val:
-            if self._uses_integer:
-                value /= self._slider_mult
-            else:
-                value /= self._slider_mult
+    def _set_all_to(self, value):
+        print("set all to ", value)
         if self._uses_integer():
-            value = round(value)
-        if source is not self._slider_val: self._slider_val.set(value * self._slider_mult)
-        if source is not self._spin_val: self._spin_val.set(value)
-        if source is not self._var: self._var.set(value)
+            value = int(round(value))
+        set_if_inequal(self._slider_val, value * self._slider_mult)
+        set_if_inequal(self._spin_val, value)
+        set_if_inequal(self._var, value)
 
     @property
     def var(self):
@@ -65,13 +75,12 @@ class Slider(QWidget):
     @var.setter
     def var(self, var):
         self._var = var if var is not None else Var()
-        self.set_from_value = self._set_vals((self._var,), self._var)
+        self.set_from_value = self._set_all_to(self._var)
 
     def set_params(self, min, max, step=1):
         self._step = step
         self._min = min
         self._max = max
-        print("max", max)
 
         if isinstance(min, float) or isinstance(max, float) or isinstance(step, float):
             self._slider_mult = 1.0 / step
