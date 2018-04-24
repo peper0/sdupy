@@ -112,6 +112,7 @@ class ForwarderBase:
         Forwarded methods are called on the object returned by this function.
         :return:
         """
+        raise NotImplementedError()
 
 
 class ConstForwarders(ForwarderBase):

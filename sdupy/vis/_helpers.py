@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from pyqtgraph import ImageItem, GraphItem
+from pyqtgraph import ImageItem, GraphItem, PlotItem
 
 from sdupy import reactive, reactive_finalizable
 
@@ -95,3 +95,14 @@ def make_graph_item_pg(pos, adj, **kwargs):
     return item
 
 
+@reactive
+def make_plot_item_pg(plot_item: PlotItem, *args, **kwargs):
+    item = plot_item.plot(*args, **kwargs)
+    yield item
+    plot_item.removeItem(item)
+
+
+def set_zvalue(zvalue, *items):
+    if zvalue is not None:
+        for item in items:
+            item.setZValue(zvalue)

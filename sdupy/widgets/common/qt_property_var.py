@@ -27,7 +27,11 @@ class QtPropertyVar(Wrapped, ConstForwarders, MutatingForwarders):
         self.obj.setProperty(self.prop_name, value)
 
     def get(self):
-        return self.obj.property(self.prop_name)
+        res= self.obj.property(self.prop_name)
+        return res
+
+    def _target(self):
+        return self
 
     @property
     def __notifier__(self):
@@ -36,3 +40,9 @@ class QtPropertyVar(Wrapped, ConstForwarders, MutatingForwarders):
     @property
     def __inner__(self):
         return self.get()
+
+    @__inner__.setter
+    def __inner__(self, value):
+        return self.set(value)
+
+

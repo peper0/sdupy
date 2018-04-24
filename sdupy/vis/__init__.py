@@ -1,17 +1,23 @@
 
-from typing import Any, List, Tuple, Union, Sequence, Optional
+from typing import Any, List, Tuple, Union, Sequence, Optional, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtWidgets import QGraphicsItem
+from PyQt5.QtWidgets import QTreeWidgetItem
+from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
+from sdupy.pyreactive.forwarder import MutatingForwarders, ConstForwarders
+from sdupy.pyreactive.notifier import Notifier
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
-from sdupy.vis._helpers import make_graph_item_pg, set_zvalue
+from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg
 from sdupy.vis.globals import global_refs
+from sdupy.widgets.pyqtgraph import PgParamTree, PgPlot, TaskParameter
+from stitching.progress import Progress
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -111,6 +117,11 @@ def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
 graph = graph_pg
 
 
+def plot_pg(widget_name: str, label=None, *args, window=None, **kwargs):
+    w = widget(widget_name, PgPlot, window=window)
+    global_refs[(w, label)] = make_plot_item_pg(w.item, *args, **kwargs)
+
+
 def data_tree_pg(widget_name: str, tree, window=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PgDataTree
     w = widget(widget_name, PgDataTree, window=window)
@@ -165,3 +176,100 @@ def array_table(widget_name: str, var: Wrapped=None, *, format:str=None, window=
     if format is not None:
         w.format = format
     return w.var
+
+
+def _paramtree_find_child(parent, child_name):
+    if isinstance(parent, ParameterTree):
+        root = parent.invisibleRootItem()  # type: QTreeWidgetItem
+        for i in range(root.childCount()):
+            if root.child(i).text(0) == child_name:
+                return root.child(i).param
+        return None
+    elif isinstance(parent, Parameter):
+        return parent.names.get(child_name)
+    raise Exception("parent has type {}".format(type(parent)))
+
+
+def _paramtree_add_child(parent, param):
+    if isinstance(parent, ParameterTree):
+        root = parent.invisibleRootItem()  # type: QTreeWidgetItem
+        for i in range(root.childCount()):
+            if root.child(i).text(0) == param.name():
+                root.removeChild(i)
+        parent.addParameters(param)
+        return None
+    elif isinstance(parent, Parameter):
+        child = parent.names.get(param.name())
+        if child is not None:
+            parent.removeChild(child)
+        return parent.addChild(param)
+    raise Exception("parent has type {}".format(type(parent)))
+
+
+def param_in_paramtree(widget_name: str, param_path: Sequence[str], param, *, window=None):
+    assert isinstance(widget_name, str)
+    param_tree = widget(widget_name, PgParamTree, window).param_tree   # type: ParameterTree
+    parent = param_tree
+    #for i in range(len(param_path)-1):
+    for i in param_path:
+        child = _paramtree_find_child(parent, i)
+        if child is None:
+            child = Parameter.create(name=i, type='group')
+            _paramtree_add_child(parent, child)
+        parent = child
+
+    _paramtree_add_child(parent, param)
+
+
+class PgParamVar(Wrapped, ConstForwarders, MutatingForwarders):
+    def __init__(self, param: Parameter):
+        super().__init__()
+        self._notifier = Notifier()
+        self.param = param
+        param.sigValueChanged.connect(self._prop_changed)
+
+    def _prop_changed(self):
+        self._notifier.notify_observers()
+
+    def set(self, value):
+        self.param.setValue(value)
+
+    def get(self):
+        return self.param.value()
+
+    def _target(self):
+        return self
+
+    @property
+    def __notifier__(self):
+        return self._notifier
+
+    @property
+    def __inner__(self):
+        return self.get()
+
+    @__inner__.setter
+    def __inner__(self, value):
+        return self.set(value)
+
+    def __str__(self):
+        return "PgParamVar({})".format(self.get())
+
+
+def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):
+    param_in_paramtree(widget_name, param_path, param, window=window)
+
+    if var is None:
+        var = PgParamVar(param)
+    else:
+        # TODO: bind current parameter with a PgParamVar
+        raise NotImplementedError()
+
+    return var
+
+
+def task_in_paramtree(widget_name: str, param_path: Sequence[str], name, func: Callable[[Progress], None] = None, *,
+                      window=None):
+    param = TaskParameter(name=name, func=func)
+    param_in_paramtree(widget_name, param_path, param, window=window)
+    return param

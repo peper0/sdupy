@@ -15,6 +15,15 @@ def default_remove_plot(plot_res, axes: plt.Axes):
         pass
 
 
+def remove_plot_hist(plot_res, axes: plt.Axes):
+    for patch in plot_res[2]:
+        patch.remove()
+
+
+def remove_plot_hist2d(plot_res, axes: plt.Axes):
+    plot_res[3].remove()
+
+
 def plot_method(unbound_method, remove_func=default_remove_plot):
     @reactive_finalizable()
     def wrapped(self, *args, **kwargs):
@@ -76,6 +85,11 @@ class ReactiveAxes(Wrapper):
     pcolorfast = plot_method(plt.Axes.pcolorfast)
     pcolormesh = plot_method(plt.Axes.pcolormesh)
     spy = plot_method(plt.Axes.spy)
+
+    # Plotting.Binned
+    hexbin = plot_method(plt.Axes.hexbin)
+    hist = plot_method(plt.Axes.hist, remove_func=remove_plot_hist)
+    hist2d = plot_method(plt.Axes.hist2d, remove_func=remove_plot_hist2d)
 
     # TODO: rest from https://matplotlib.org/api/axes_api.html#plotting
 

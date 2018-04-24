@@ -6,11 +6,12 @@ from typing import Any, Mapping, Tuple
 import networkx as nx
 import pyqtgraph as pg
 from PyQt5.QtCore import QPointF
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar
-from pyqtgraph.parametertree import Parameter, ParameterItem
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout
+from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
 from sdupy.utils import ignore_errors
+from sdupy.widgets import register_widget
 from stitching.progress import Progress
 from . import register_widget
 from ..pyreactive import reactive_finalizable
@@ -149,7 +150,7 @@ class PathParameterItem(WidgetParameterItem):
     @ignore_errors
     def browse(self, xx):
         file_dialog = QFileDialog()
-        self.widget.setValue(file_dialog.getExistingDirectory(directory=self.widget.value()))
+        self.param.setValue(file_dialog.getExistingDirectory(directory=self.widget.value()))
 
 
 class PathParameter(Parameter):
@@ -213,8 +214,10 @@ class TaskParameterItem(ParameterItem):
             elif task.cancelled():
                 self.progress_bar.setFormat('cancelled')
             elif task.exception():
-                self.progress_bar.setFormat('error: ' + str(task.exception()))
-                logging.exception('task finished with error')
+                self.progress_bar.setFormat('error (see tooltip)')
+                self.progress_bar.setToolTip('error: ' + str(task.exception()))
+
+                logging.error('task finished with error: ' + str(task.exception()))
             else:
                 self.progress_bar.setValue(1000)
                 self.progress_bar.setFormat('finished')
@@ -268,3 +271,21 @@ class TaskParameter(Parameter):
                     return
         except:
             logging.exception("error in show_progress")
+
+
+@register_widget('param tree')
+class PgParamTree(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
+
+        self.param_tree = ParameterTree(self)
+        self.layout.addWidget(self.param_tree)
+
+    def dump_state(self):
+        return dict(
+        )
+
+    def load_state(self, state: dict):
+        pass
