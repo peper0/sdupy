@@ -51,10 +51,6 @@ class Slider(QWidget):
         self._max = None
 
         self.var = Var()
-        self.refs = [
-            self._set_all_to(self._spin_val),
-            self._set_all_to(self._slider_val/self._slider_mult)
-        ]
 
     def _uses_integer(self):
         return isinstance(self._slider_mult, int)
@@ -92,6 +88,11 @@ class Slider(QWidget):
         self.slider.setSingleStep(int(step * self._slider_mult))
         self.spin_box.setRange(min, max)
         self.spin_box.setSingleStep(step)
+        self.refs = [
+            self._set_all_to(self._spin_val),
+            self._set_all_to(self._slider_val/self._slider_mult)
+        ]
+
 
         val = unwrap_def(self._var, None)
         if val is not None:
