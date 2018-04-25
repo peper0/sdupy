@@ -89,6 +89,15 @@ vis.pg_param(place, name, var, type, ...)
 - igraph jest fajny i pythonowy, ale nie umie sam z siebie matplotliba (używa cairo)
 - https://stackoverflow.com/questions/5759878/is-there-an-interactive-graphing-library-for-python
 
+= drugie
+- task z progressem (chcemy, żeby w tle leciał jakiś task, wyświetlać do niego progress_bar + cancel, a także żeby się
+cancelował jak nadpiszemy zmienną kontrolną)
+- graf obserwerów, dla każdego liczba wywołań, średni, maksymalny i ostatni czas wykonania
+- czy da się przyspieszyć rysowanie obrazków (szczególnie dużych) w matplotlibie? może inny backend? obejrzeć
+implementację
+- może chociaż wyłączyć "draw" na Axes, które nie są widoczne (a może to tak działa - sprawdzić)
+
+
 = slider
 - kasowanie rysowaczy nie działa jak jest reactive w reactive
 - może jednak slider zamiast scroll bara skoro jest spinbox?
