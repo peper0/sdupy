@@ -18,6 +18,7 @@ matplotlib.rcParams.update({'font.size': 6})
 MODIFIER_KEYS = set(['shift', 'control', 'alt'])
 
 
+#FIXME: rename to MplFigure
 @register_widget("matplotlib figure")
 class Figure(QWidget):
     def __init__(self, parent):
@@ -58,6 +59,10 @@ class Figure(QWidget):
         self.resizeEvent(None)
 
         self.setMinimumSize(200, 200)
+
+    @property
+    def visibilityChanged(self):
+        return self.parentWidget().visibilityChanged
 
     def on_key_press(self, event):
         if event.key in MODIFIER_KEYS:

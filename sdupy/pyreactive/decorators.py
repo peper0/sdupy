@@ -133,7 +133,8 @@ class ReactiveCm(Reactive):
 
 def reactive_finalizable(pass_args: Iterable[str] = None,
                          other_deps: Iterable[str] = None,
-                         dep_only_args: Iterable[str] = None):
+                         dep_only_args: Iterable[str] = None,
+                         ):
     if callable(pass_args):
         # a shortcut that allows simple @reactive instead of @reactive()
         return reactive_finalizable()(pass_args)

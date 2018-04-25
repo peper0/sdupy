@@ -18,3 +18,21 @@ def ignore_errors(f=None, *, retval=None):
     else:
         return wrap
 
+
+def trace(f=None):
+    def wrap(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            try:
+                res = f(*args, **kwargs)
+                print("------------ {}({} {}) -> {}".format(f.__name__, args, kwargs, res))
+                return res
+            except Exception as e:
+                print("------------ {}({} {}) # {}".format(f.__name__, args, kwargs, e))
+                raise
+        return wrapper
+
+    if f:  # a shortcut
+        return wrap(f)
+    else:
+        return wrap

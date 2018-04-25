@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
         self.removeDockWidget(self.widgets[widget_name].dock_widget)
         del self.widgets[widget_name]
 
-    def obtain_widget(self, name, factory_or_name):
+    def obtain_widget_instance(self, name, factory_or_name):
         if name not in self.widgets:
             if isinstance(factory_or_name, str):
                 factory_desc = widgets.registered_factories[factory_or_name]
@@ -109,7 +109,11 @@ class MainWindow(QMainWindow):
                 # factory_desc = factory_descs[0]
             self.add_widget_from_factory(factory_desc, widget_name=name, title=name)
 
-        return self.widgets[name].widget
+        return self.widgets[name]
+
+    def obtain_widget(self, name, factory_or_name):
+        wi = self.obtain_widget_instance(name, factory_or_name)
+        return wi.widget, wi.dock_widget
 
     def closeEvent(self, a0: QCloseEvent):
         self.save_state_action()

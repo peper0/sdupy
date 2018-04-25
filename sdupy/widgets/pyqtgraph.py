@@ -17,35 +17,41 @@ from . import register_widget
 from ..pyreactive import reactive_finalizable
 
 
-@register_widget("pyqtgraph figure")
-class PyQtGraphPlot(pg.PlotWidget):
-    pass
+class PgOneItem(pg.GraphicsView):
+    def __init__(self, parent, view):
+        super().__init__(parent)
+        self.view = view
+        self.setCentralItem(self.view)
+        #FIXME: it's ugly hack but at least it's in one place and we don't break many code
+        #self.visibilityChanged = parent.visibilityChanged
+        #self.visibleRegion = parent.visibleRegion
+
+    def visibleRegion(self):
+        # in pg.GraphicsView it returns always empty region
+        return self.parentWidget().visibleRegion()
+
+    @property
+    def visibilityChanged(self):
+        return self.parentWidget().visibilityChanged
 
 
 @register_widget("pyqtgraph view box")
-class PyQtGraphViewBox(pg.GraphicsView):
+class PgViewBox(PgOneItem):
     def __init__(self, parent):
-        super().__init__(parent)
-        self.item = pg.ViewBox(lockAspect=True)
-        self.setCentralItem(self.item)
-
+        super().__init__(parent, pg.ViewBox(lockAspect=True))
 
 
 @register_widget("pyqtgraph image")
-class PgFigure(pg.GraphicsView):
+class PgFigure(PgOneItem):
     def __init__(self, parent):
-        super().__init__(parent)
-        self.item = pg.PlotItem(lockAspect=True)
-        self.item.setAspectLocked(True)
-        self.setCentralItem(self.item)
+        super().__init__(parent, pg.PlotItem(lockAspect=True))
+        self.view.setAspectLocked(True)
 
 
 @register_widget("pyqtgraph plot")
-class PgPlot(pg.GraphicsView):
+class PgPlot(PgOneItem):
     def __init__(self, parent):
-        super().__init__(parent)
-        self.item = pg.PlotItem()
-        self.setCentralItem(self.item)
+        super().__init__(parent, pg.PlotItem())
 
 
 def index_to_str(index):
@@ -59,13 +65,14 @@ def index_to_str(index):
 
 
 @register_widget("pyqtgraph image view")
-class PyQtGraphImage(pg.ImageView):
+class PgImage(pg.ImageView):
     def __init__(self, parent):
         super().__init__(parent, view=pg.PlotItem())
         self.view.setAspectLocked(True)
         self._show_cursor_proxy = None
         self.cursor_pos_label = None
         self.show_cursor_pos()
+        self.visibilityChanged = parent.visibilityChanged  # FIXME we assume too much about our parent
 
     def show_cursor_pos(self, show=True):
         if self._show_cursor_proxy:
@@ -125,6 +132,14 @@ class PyQtGraphImage(pg.ImageView):
 class PgDataTree(pg.DataTreeWidget):
     def __init__(self, parent=None, data=None):
         super().__init__(parent, data)
+
+    def visibleRegion2(self):
+        # in pg.GraphicsView it returns always empty region
+        return self.parentWidget().visibleRegion()
+
+    @property
+    def visibilityChanged(self):
+        return self.parentWidget().visibilityChanged
 
 
 class PathParameterItem(WidgetParameterItem):

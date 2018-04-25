@@ -1,19 +1,18 @@
-
 from typing import Any, List, Tuple, Union, Sequence, Optional, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from PyQt5.QtWidgets import QGraphicsItem
+from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget
 from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
-from sdupy.pyreactive.notifier import Notifier
+from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
-from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg
+from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, TriggerIfVisible
 from sdupy.vis.globals import global_refs
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
 from sdupy.widgets.pyqtgraph import PgParamTree, PgPlot, TaskParameter
@@ -24,9 +23,17 @@ from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
 
 
-def widget(name: str, factory=None, window: WindowSpec = None):
+def widget_and_dock(name: str, factory=None, window: WindowSpec = None):
     assert isinstance(name, str)
     return sdupy.window(window).obtain_widget(name, factory)
+
+
+def widget(name: str, factory=None, window: WindowSpec = None) -> QWidget:
+    return widget_and_dock(name, factory, window)[0]
+
+
+def dock_widget(name: str, factory=None, window: WindowSpec = None) -> QDockWidget:
+    return widget_and_dock(name, factory, window)[1]
 
 
 # TODO: add option for name=None that returns the last axes used or the new one (if none was used yet)
@@ -46,10 +53,11 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     :return:
     """
     ax = mpl_axes(name=widget_name, window=window)
+    w = widget(name=widget_name, window=window)
     image_name = kwargs.get('label')
     print('================shape', image.shape)
     i = ax.imshow(image_to_mpl(image, is_bgr), **kwargs)
-    global_refs[(ax.__inner__, image_name)] = i
+    global_refs[(ax.__inner__, image_name)] = TriggerIfVisible(i, ax.__inner__.canvas.parentWidget())
     return i
 
 
@@ -60,14 +68,14 @@ def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
     ax = mpl_axes(name=widget_name, window=window)
     plot_name = kwargs.get('label')
     plot = getattr(ax, plot_fn)
-    global_refs[(ax.__inner__, plot_name)] = plot(*args, **kwargs)
+    global_refs[(ax.__inner__, plot_name)] = TriggerIfVisible(plot(*args, **kwargs), ax.__inner__.canvas.parentWidget())
 
 
 def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zvalue=None, window=None):
-    from sdupy.widgets.pyqtgraph import PgPlot
-    w = widget(widget_name, PgPlot, window=window)
+    from sdupy.widgets.pyqtgraph import PgFigure
+    w = widget(widget_name, PgFigure, window=window)
 
-    global_refs[(w, label)] = pg_hold_items(w.item, *items, zvalue=zvalue)
+    global_refs[(w, label)] = TriggerIfVisible(pg_hold_items(w.view, *items, zvalue=zvalue), w)
 
 
 def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
@@ -78,9 +86,10 @@ def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=N
 
 
 def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, **kwargs):
-    from sdupy.widgets.pyqtgraph import PyQtGraphImage
+    from sdupy.widgets.pyqtgraph import PgImage
 
-    w = widget(widget_name, PyQtGraphImage, window=window)
+    w = widget(widget_name, PgImage, window=window)
+
     @reactive
     def set_image(image: np.ndarray, extent=None, **kwargs):
         set_image_args = kwargs
@@ -99,7 +108,7 @@ def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, 
         #w.imageItem.setAutoDownsample(True)
 
     # levels=levels_for(image),
-    global_refs[(w, '__image__')] = set_image(image, extent, **kwargs)
+    global_refs[(w, '__image__')] = TriggerIfVisible(set_image(image, extent, **kwargs), w)
 
 
 def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):
@@ -108,7 +117,6 @@ def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwarg
 
 def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
     print("image_pg")
-    #items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
     items = [make_graph_item_pg(pos, adj, **kwargs)]
     draw_pg(widget_name, ('__graph__', label), items, window=window)
     return items[0]
@@ -119,14 +127,14 @@ graph = graph_pg
 
 def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     w = widget(widget_name, PgPlot, window=window)
-    global_refs[(w, label)] = make_plot_item_pg(w.item, *args, **kwargs)
+    global_refs[(w, label)] = TriggerIfVisible(make_plot_item_pg(w.view, *args, **kwargs), w)
 
 
 def data_tree_pg(widget_name: str, tree, window=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PgDataTree
     w = widget(widget_name, PgDataTree, window=window)
 
-    global_refs[(w)] = reactive(w.setData)(tree)
+    global_refs[(w)] = TriggerIfVisible(reactive(w.setData)(tree), w)
 
 
 data_tree = data_tree_pg
@@ -141,7 +149,7 @@ def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, window=
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var
-    global_refs[(w, 'set_params')] = reactive(w.set_params)(min, max, step)
+    global_refs[(w, 'set_params')] = volatile(reactive(w.set_params)(min, max, step))
     return w.var
 
 

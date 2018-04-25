@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import logging
 from abc import abstractmethod
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from itertools import chain
 from typing import Any, Dict, List, Set, Tuple
 
@@ -204,8 +204,9 @@ def observe_args(args_helper: ArgsHelper, pass_args: Set[str], notify_callback, 
             maybe_observe(arg, notify_callback, notifiers)
 
 
-class Proxy(Wrapped, MutatingForwarders):
+class Proxy(Wrapped, ConstForwarders, MutatingForwarders):
     def __init__(self, other_var: Wrapped):
+        assert other_var is not None
         super().__init__()
         self._notifier = Notifier()
         self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
@@ -225,6 +226,17 @@ class Proxy(Wrapped, MutatingForwarders):
 
     def __getattr__(self, item):
         return getattr(self._target().__inner__, item)
+
+
+class VolatileProxy(Proxy):
+    def __init__(self, other_var: Wrapped):
+        super().__init__(other_var)
+        self._trigger_ref = self._trigger
+        self._other_var.__notifier__.add_observer(self._trigger_ref, self._notifier)
+
+    def _trigger(self):
+        with suppress(Exception):
+            self._other_var.__inner__  # trigger run even if the result is not used
 
 
 class SwitchableProxy(Wrapped, ConstForwarders):
@@ -279,13 +291,79 @@ class SwitchableProxy(Wrapped, ConstForwarders):
 
     @reactive
     def __getattr__(self, item):
-        # FIXME: optional proxying result (if returned value is proxy)
-        #return getattr(self._target().__inner__, item)
         return getattr(self, item)
 
-    # TODO: other forwarders
 
+class LazyZiom(Wrapped, ConstForwarders):
+    """
+    A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
+    exactly like the object itself.
 
+    It must implement WrapperInterface since it's possible that the object inside implements it. If the
+    Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._ref = None
+        self._notifier = Notifier()
+        self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
+        self._dirty = False
+        self._exception = None
+
+    @property
+    def __notifier__(self):
+        return self._notifier
+
+    @property
+    def __inner__(self):
+        if self._exception is not None:
+            raise self._exception
+        self._update_if_dirty()
+        if self._ref is not None and hasattr(self._ref, '__inner__'):
+            res = self._ref.__inner__
+            #print("returining", res)
+            return res
+
+    def _target(self):
+        self._update_if_dirty()
+        if self._ref is None:
+            raise NotInitializedError()
+        return self._ref
+
+    def _get_ref(self):
+        try:
+            return self._ref
+        except Exception:
+            return None
+
+    def _set_ref(self, ref):
+        self._unobserve_value()
+        self._ref = as_observable(ref)
+        self._exception = None
+        self._observe_value()
+
+    def _unobserve_value(self):
+        ref = self._get_ref()
+        if ref is not None and hasattr(ref, '__notifier__'):
+            return ref.__notifier__.remove_observer(self._notify_observers)
+
+    def _observe_value(self):
+        ref = self._get_ref()
+        if ref is not None and hasattr(ref, '__notifier__'):
+            return ref.__notifier__.add_observer(self._notify_observers, self._notifier)
+
+    @reactive
+    def __getattr__(self, item):
+        return getattr(self, item)
+
+    def _update_if_dirty(self):
+
+        if self._dirty:
+            # doesn't work for async updates
+            self._update()
+            print("update bo dirty", repr(self))
+            self._dirty = False
 
 
 class HashableCallable:
@@ -306,11 +384,11 @@ class HashableCallable:
         return isinstance(other, HashableCallable) and self.uid == other.uid
 
 
-class ReactiveProxy(SwitchableProxy):
+class ReactiveProxy(LazyZiom):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
         super().__init__()
         self.decorated = decorated
-        self._update_ref_holder = HashableCallable(self._update, (id(self), ReactiveProxy._update))
+        self._args_changed_ref = HashableCallable(self._args_changed, (id(self), ReactiveProxy._args_changed))
 
         # use dep_only_args
         for name in decorated.decorator.dep_only_args:
@@ -318,28 +396,28 @@ class ReactiveProxy(SwitchableProxy):
                 arg = kwargs[name]  # fixme use "pop"
                 if hasattr(arg, '__iter__'):
                     for a in arg:
-                        observe(a, self._update_ref_holder, self.__notifier__)
+                        observe(a, self._args_changed_ref, self.__notifier__)
                 else:
-                    observe(arg, self._update_ref_holder, self.__notifier__)
+                    observe(arg, self._args_changed_ref, self.__notifier__)
 
                 del kwargs[name]
 
         # use other_deps
         for dep in decorated.decorator.other_deps:
-            maybe_observe(dep, self._update_ref_holder, self.__notifier__)
+            maybe_observe(dep, self._args_changed_ref, self.__notifier__)
 
         self.args_helper = ArgsHelper(args, kwargs, decorated.signature)
         self.args = self.args_helper.args
         self.kwargs = self.args_helper.kwargs
 
-        observe_args(self.args_helper, self.decorated.decorator.pass_args, self._update_ref_holder, self.__notifier__)
+        observe_args(self.args_helper, self.decorated.decorator.pass_args, self._args_changed_ref, self.__notifier__)
 
     @contextmanager
     def _handle_exception(self, reraise):
         try:
             yield
         except Exception as e:
-            self._ref.set_exception(e)
+            self._exception = e
             if reraise:
                 if not isinstance(e, ArgumentError):
                     # ArgumentError is not re-raised since it was
@@ -357,6 +435,12 @@ class ReactiveProxy(SwitchableProxy):
     @abstractmethod
     def _update(self, retval=None, reraise=False):
         pass
+
+    def _args_changed(self):
+        print("changed:", repr(self))
+        self._dirty = True
+        self._notify_observers()
+        #FIXME update immediately if update is async?
 
 
 class SyncReactiveProxy(ReactiveProxy):
@@ -426,3 +510,8 @@ class AsyncCmReactiveProxy(ReactiveProxy):
                 await cm.__aexit__(None, None, None)
         except Exception:
             logging.exception("ignoring exception in cleanup")
+
+
+def volatile(var):
+    if var is not None:  # var may be none if we make "volatile(foo(x))" where foo is reactive and x is not observable
+        return VolatileProxy(var)

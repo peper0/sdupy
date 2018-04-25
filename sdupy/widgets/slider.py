@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 
 from sdupy.pyreactive import Var, reactive
 from sdupy.pyreactive.common import unwrap_def, unwrap
-from sdupy.pyreactive.var import NotInitializedError
+from sdupy.pyreactive.var import NotInitializedError, volatile
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
 
@@ -71,7 +71,7 @@ class Slider(QWidget):
     @var.setter
     def var(self, var):
         self._var = var if var is not None else Var()
-        self.set_from_value = self._set_all_to(self._var)
+        self.set_from_value = volatile(self._set_all_to(self._var))
 
     def set_params(self, min, max, step=1):
         self._step = step
@@ -89,8 +89,8 @@ class Slider(QWidget):
         self.spin_box.setRange(min, max)
         self.spin_box.setSingleStep(step)
         self.refs = [
-            self._set_all_to(self._spin_val),
-            self._set_all_to(self._slider_val/self._slider_mult)
+            volatile(self._set_all_to(self._spin_val)),
+            volatile(self._set_all_to(self._slider_val / self._slider_mult))
         ]
 
 
