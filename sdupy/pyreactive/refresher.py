@@ -13,6 +13,7 @@ class QueueItem(NamedTuple):
     priority: int
     id: Any  # FIXME: remove id (callable MUST be hashable, we use wrapper if it isn't)
     func: Callable
+    stats: dict
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -38,10 +39,10 @@ class AsyncRefresher:
             logger.exception('refresh task finished with exception, rethrowing')
             raise e
 
-    def schedule_call(self, func: NotifyFunc, id, priority):
+    def schedule_call(self, func: NotifyFunc, id, priority, stats):
         if priority is None:
             priority = 999999
-        t = QueueItem(priority, id, func)
+        t = QueueItem(priority, id, func, stats)
         self.queue.put_nowait(t)
         self.maybe_start_task()
 
@@ -60,12 +61,15 @@ class AsyncRefresher:
                     update_next = None
 
                 try:
+                    update.stats['calls'] = update.stats.get('calls', 0) + 1
                     f = update.func
                     res = f()
                     if asyncio.iscoroutine(res):
                         await res
+                    update.stats['exception'] = None
                 except Exception as e:
                     logger.exception('ignoring exception when in notifying observer {}'.format(update.func))
+                    update.stats['exception'] = e
         gc.collect()
 
 

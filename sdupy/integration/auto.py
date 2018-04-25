@@ -6,14 +6,14 @@ except Exception:
     pass
 
 if ipython is None:
-    print("no ipython/jupyter environment detected, call 'run_loop()' after initialization of the application")
+    print("no ipython/jupyter environment detected, call 'run_mainloop()' after initialization of the application")
     from .standalone import run_mainloop
 
     unused = run_mainloop
 
 
     def install():
-        print("no ipython/jupyter environment detected, call 'run_loop()' after initialization of the application")
+        print("no ipython/jupyter environment detected, call 'run_mainloop()' after initialization of the application")
 else:
     if ipython.__class__.__name__ == 'PyDevTerminalInteractiveShell':
         print("pydev_ipython detected")
@@ -21,5 +21,9 @@ else:
     elif ipython.__class__.__name__ == 'ZMQInteractiveShell':
         print("jupyter python kernel detected")
         from .jupyter import install
+
+
+    def run_mainloop():
+        print("You shouldn't do it! Use 'install_mainloop()'")
 
 unused = install  # just ensure IDE that it is used

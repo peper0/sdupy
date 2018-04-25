@@ -42,6 +42,8 @@ class MainWindow(QMainWindow):
 
         self.close_callback = None
 
+        self.resize(400, 400)  # workaround some bugs
+
         for factory_desc in widgets.registered_factories.values():
             self.add_factory_to_gui(factory_desc)
 

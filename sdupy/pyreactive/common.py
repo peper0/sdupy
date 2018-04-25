@@ -24,7 +24,7 @@ T = TypeVar('T')
 class Wrapped(Generic[T]):
     @property
     @abstractmethod
-    def __notifier__(self):
+    def __notifier__(self) -> 'Notifier':
         """
         A notifier, that will notify whenever a reactive function that used this object should be called again.
         """

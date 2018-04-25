@@ -7,9 +7,9 @@ from sdupy.pyreactive.notifier import Notifier
 
 
 class QtSignaledVar(Wrapped, ConstForwarders, MutatingForwarders):
-    def __init__(self, signal):
+    def __init__(self, signal, name):
         super().__init__()
-        self._notifier = Notifier()
+        self._notifier = Notifier(name=name)
         signal.connect(self._prop_changed)
 
     def _prop_changed(self):
@@ -49,7 +49,7 @@ class QtPropertyVar(QtSignaledVar):
         notify_signal_name = bytes(notify_signal_meta.name()).decode('utf8')
         assert notify_signal_name, "property '{}' notifier has no name?!".format(prop_name)
         notify_signal = getattr(obj, notify_signal_name)
-        super().__init__(notify_signal)
+        super().__init__(notify_signal, obj.objectName()+'.'+prop_name)
 
     def set(self, value):
         self.obj.setProperty(self.prop_name, value)

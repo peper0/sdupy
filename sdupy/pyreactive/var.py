@@ -13,8 +13,8 @@ from .notifier import DummyNotifier, Notifier
 
 
 class Wrapper(Wrapped):
-    def __init__(self, raw=None):
-        self._notifier = Notifier()
+    def __init__(self, raw=None, name=None):
+        self._notifier = Notifier(name)
         self._exception = None  # type: Exception
         self._raw = raw
 
@@ -85,8 +85,8 @@ class ArgumentError(Exception):
 class Var(Wrapper, ConstForwarders, MutatingForwarders):
     NOT_INITIALIZED = NotInitializedError()
 
-    def __init__(self, raw=NOT_INITIALIZED):
-        super().__init__()
+    def __init__(self, raw=NOT_INITIALIZED, name=None):
+        super().__init__(name=name)
         if raw is self.NOT_INITIALIZED:
             self.set_exception(NotInitializedError())
         else:
@@ -146,11 +146,14 @@ def as_observable(v):
 
 
 class ArgsHelper:
-    def __init__(self, args, kwargs, signature):
+    def __init__(self, args, kwargs, signature, callable):
         if signature:
             # support default parameters
-            bound_args = signature.bind(*args, **kwargs)  # type: inspect.BoundArguments
-            bound_args.apply_defaults()
+            try:
+                bound_args = signature.bind(*args, **kwargs)  # type: inspect.BoundArguments
+                bound_args.apply_defaults()
+            except Exception as e:
+                raise Exception('during binding {}{}'.format(callable.__name__, signature)) from e
             args_names = list(signature.parameters)
 
             self.args = bound_args.args
@@ -208,7 +211,7 @@ class Proxy(Wrapped, ConstForwarders, MutatingForwarders):
     def __init__(self, other_var: Wrapped):
         assert other_var is not None
         super().__init__()
-        self._notifier = Notifier()
+        self._notifier = Notifier(other_var.__notifier__.name+"_proxy")
         self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
         self._other_var = other_var
         self._other_var.__notifier__.add_observer(self._notify_observers, self._notifier)
@@ -248,10 +251,10 @@ class SwitchableProxy(Wrapped, ConstForwarders):
     Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
     """
 
-    def __init__(self):
+    def __init__(self, name):
         super().__init__()
         self._ref = Var()
-        self._notifier = Notifier()
+        self._notifier = Notifier(name=name)
         self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
         self._ref.__notifier__.add_observer(self._notify_observers, self._notifier)
 
@@ -303,10 +306,10 @@ class LazyZiom(Wrapped, ConstForwarders):
     Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
     """
 
-    def __init__(self):
+    def __init__(self, name):
         super().__init__()
         self._ref = None
-        self._notifier = Notifier()
+        self._notifier = Notifier(name)
         self._notify_observers = self._notifier.notify_observers  # hold ref for notifier
         self._dirty = False
         self._exception = None
@@ -386,7 +389,7 @@ class HashableCallable:
 
 class ReactiveProxy(LazyZiom):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
-        super().__init__()
+        super().__init__(name=decorated.callable.__name__)
         self.decorated = decorated
         self._args_changed_ref = HashableCallable(self._args_changed, (id(self), ReactiveProxy._args_changed))
 
@@ -406,7 +409,7 @@ class ReactiveProxy(LazyZiom):
         for dep in decorated.decorator.other_deps:
             maybe_observe(dep, self._args_changed_ref, self.__notifier__)
 
-        self.args_helper = ArgsHelper(args, kwargs, decorated.signature)
+        self.args_helper = ArgsHelper(args, kwargs, decorated.signature, decorated.callable)
         self.args = self.args_helper.args
         self.kwargs = self.args_helper.kwargs
 

@@ -40,6 +40,10 @@ class PgViewBox(PgOneItem):
     def __init__(self, parent):
         super().__init__(parent, pg.ViewBox(lockAspect=True))
 
+@register_widget("pyqtgraph layout")
+class PgLayout(pg.GraphicsLayoutWidget):
+    pass
+
 
 @register_widget("pyqtgraph image")
 class PgFigure(PgOneItem):

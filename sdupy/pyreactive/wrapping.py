@@ -10,7 +10,7 @@ def get_subnotifier(self: Notifier, name: str) -> Notifier:
         return self.__notifier__
     if not hasattr(self, '_subnotifiers'):
         setattr(self, '_subnotifiers', dict())
-    return self._subnotifiers.setdefault(name, Notifier())
+    return self._subnotifiers.setdefault(name, Notifier("subnotifier " + name))
 
 
 def observable_method(unbound_method, observed: Sequence[str], notified: Sequence[str]):
