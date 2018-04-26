@@ -11,6 +11,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
 from sdupy.pyreactive import unwrap_exception
+from sdupy.pyreactive.notifier import Notifier
 from sdupy.utils import ignore_errors
 from .common.register import register_factory, register_widget
 from ..pyreactive import Wrapped, reactive, unwrap
@@ -53,7 +54,7 @@ class VarsModel(QAbstractTableModel):
     class VarInList(NamedTuple):
         title: str
         var: Wrapped
-        notify_func: Callable
+        notifier: Notifier
         to_value: Callable[[str], Any]
 
     def __init__(self, parent=None):
@@ -124,15 +125,16 @@ class VarsModel(QAbstractTableModel):
         assert var is not None
         self.remove_var(title)
 
-        async def notify_changed():
+        def notify_changed():
             for i, var_in_the_list in enumerate(self.vars):
                 if var_in_the_list.var is var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
 
-        var.__notifier__.add_observer(notify_changed, None)
+        notifier = Notifier(notify_changed, 'var ' + title + ' in table')
+        var.__notifier__.add_observer(notifier)
 
         self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
-        self.vars.append(VarsModel.VarInList(title=title, var=var, notify_func=notify_changed, to_value=to_value))
+        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notifier, to_value=to_value))
         self.endInsertRows()
 
     @ignore_errors

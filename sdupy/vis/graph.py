@@ -8,7 +8,7 @@ from PyQt5.QtGui import QBrush, QColor, QFont
 from pyqtgraph import SpotItem
 
 from sdupy import reactive, reactive_finalizable
-from sdupy.reactive import unwrapped
+from sdupy.pyreactive import unwrapped
 from sdupy.utils import ignore_errors
 
 

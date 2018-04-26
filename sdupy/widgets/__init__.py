@@ -12,7 +12,7 @@ from .combo import ComboBox
 
 @register_widget("checkbox")
 class CheckBox(QCheckBox):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.var = QtPropertyVar(self, 'checked')
 

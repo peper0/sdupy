@@ -10,9 +10,8 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QPro
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
+from sdupy.progress import Progress
 from sdupy.utils import ignore_errors
-from sdupy.widgets import register_widget
-from stitching.progress import Progress
 from . import register_widget
 from ..pyreactive import reactive_finalizable
 
@@ -26,7 +25,7 @@ class PgOneItem(pg.GraphicsView):
         #self.visibilityChanged = parent.visibilityChanged
         #self.visibleRegion = parent.visibleRegion
 
-    def visibleRegion(self):
+    def visibleRegion2(self):
         # in pg.GraphicsView it returns always empty region
         return self.parentWidget().visibleRegion()
 
@@ -37,7 +36,7 @@ class PgOneItem(pg.GraphicsView):
 
 @register_widget("pyqtgraph view box")
 class PgViewBox(PgOneItem):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent, pg.ViewBox(lockAspect=True))
 
 @register_widget("pyqtgraph layout")
@@ -47,14 +46,14 @@ class PgLayout(pg.GraphicsLayoutWidget):
 
 @register_widget("pyqtgraph image")
 class PgFigure(PgOneItem):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent, pg.PlotItem(lockAspect=True))
         self.view.setAspectLocked(True)
 
 
 @register_widget("pyqtgraph plot")
 class PgPlot(PgOneItem):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent, pg.PlotItem())
 
 
@@ -70,7 +69,7 @@ def index_to_str(index):
 
 @register_widget("pyqtgraph image view")
 class PgImage(pg.ImageView):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent, view=pg.PlotItem())
         self.view.setAspectLocked(True)
         self._show_cursor_proxy = None
@@ -134,16 +133,8 @@ class PgImage(pg.ImageView):
 
 @register_widget("pyqtgraph data tree")
 class PgDataTree(pg.DataTreeWidget):
-    def __init__(self, parent=None, data=None):
-        super().__init__(parent, data)
-
-    def visibleRegion2(self):
-        # in pg.GraphicsView it returns always empty region
-        return self.parentWidget().visibleRegion()
-
-    @property
-    def visibilityChanged(self):
-        return self.parentWidget().visibilityChanged
+    def __init__(self, parent, name):
+        super().__init__(parent)
 
 
 class PathParameterItem(WidgetParameterItem):
@@ -302,7 +293,7 @@ class TaskParameter(Parameter):
 
 @register_widget('param tree')
 class PgParamTree(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)

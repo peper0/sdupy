@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 
 from sdupy.pyreactive import Var, reactive
 from sdupy.pyreactive.common import unwrap_def, unwrap
+from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import NotInitializedError, volatile
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
@@ -12,20 +13,21 @@ from sdupy.widgets.common.register import register_widget
 
 def set_if_inequal(var_to_set, new_value):
     try:
-        print("{} is {}".format(repr(var_to_set), var_to_set.__inner__))
+        #print("{} is {}".format(repr(var_to_set), var_to_set.__inner__))
         if var_to_set.__inner__ == new_value:
             return
     except NotInitializedError:
         pass
-    print("setting {} to {}".format(repr(var_to_set), new_value))
+    #print("setting {} to {}".format(repr(var_to_set), new_value))
     var_to_set.__inner__ = new_value
 
 
 
 @register_widget("slider")
 class Slider(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
+        self.name = name
         self.layout = QHBoxLayout(self)
         self.setLayout(self.layout)
 
@@ -50,7 +52,7 @@ class Slider(QWidget):
         self._min = None
         self._max = None
 
-        self.var = Var()
+        self.var = Var(name='var')
 
     def _uses_integer(self):
         return isinstance(self._slider_mult, int)
@@ -70,8 +72,9 @@ class Slider(QWidget):
 
     @var.setter
     def var(self, var):
-        self._var = var if var is not None else Var()
-        self.set_from_value = volatile(self._set_all_to(self._var))
+        with ScopedName(name=self.name):
+            self._var = var if var is not None else Var(name='var')
+            self.set_from_value = volatile(self._set_all_to(self._var))
 
     def set_params(self, min, max, step=1):
         self._step = step
@@ -88,10 +91,11 @@ class Slider(QWidget):
         self.slider.setSingleStep(int(step * self._slider_mult))
         self.spin_box.setRange(min, max)
         self.spin_box.setSingleStep(step)
-        self.refs = [
-            volatile(self._set_all_to(self._spin_val)),
-            volatile(self._set_all_to(self._slider_val / self._slider_mult))
-        ]
+        with ScopedName(name=self.name):
+            self.refs = [
+                volatile(self._set_all_to(self._spin_val)),
+                volatile(self._set_all_to(self._slider_val / self._slider_mult))
+            ]
 
 
         val = unwrap_def(self._var, None)

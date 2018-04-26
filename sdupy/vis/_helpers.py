@@ -1,13 +1,12 @@
 from contextlib import suppress
 
-import cv2
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtWidgets import QDockWidget, QWidget
 from pyqtgraph import ImageItem, GraphItem, PlotItem
 
-from sdupy import reactive, reactive_finalizable
-from sdupy.pyreactive import Wrapped
+from sdupy.pyreactive import Wrapped, reactive, reactive_finalizable
+from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import Proxy
 from sdupy.utils import trace
 
@@ -116,11 +115,12 @@ def set_zvalue(zvalue, *items):
 
 class TriggerIfVisible(Proxy):
     def __init__(self, other_var: Wrapped, widget: QWidget):
-        super().__init__(other_var)
+        with ScopedName('trig_if_vis'):
+            super().__init__(other_var)
         self.widget = widget
-        self._trigger_ref = self._trigger
-        self._other_var.__notifier__.add_observer(self._trigger_ref, self._notifier)
-        self.widget.visibilityChanged.connect(self._trigger_ref)
+        self._notifier.notify_func = self._trigger
+        self._other_var.__notifier__.add_observer(self._notifier)
+        self.widget.visibilityChanged.connect(self._trigger)
 
     @trace
     def _is_visible(self):
@@ -135,3 +135,4 @@ class TriggerIfVisible(Proxy):
                 print("++++++++++++triggering")
                 self._other_var.__inner__  # trigger run even if the result is not used
                 print("triggered")
+        return True

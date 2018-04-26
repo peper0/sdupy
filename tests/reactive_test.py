@@ -3,27 +3,27 @@ import gc
 
 import asynctest
 
-from sdupy.reactive import wait_for_var
-from sdupy.reactive.common import Wrapped, unwrap, unwrap_exception, unwrapped
-from sdupy.reactive.decorators import reactive, reactive_finalizable
+from sdupy.pyreactive import wait_for_var
+from sdupy.pyreactive.common import Wrapped, unwrap, unwrap_exception, unwrapped
+from sdupy.pyreactive.decorators import reactive, reactive_finalizable
 # from sdupy.reactive.decorators import reactive, reactive_finalizable, var_from_gen
 # from sdupy.reactive.var import Observable, var, Wrapper
-from sdupy.reactive.notifier import Notifier
-from sdupy.reactive.var import var
+from sdupy.pyreactive.notifier import Notifier
+from sdupy.pyreactive.var import var
 
 
 class NotifierTests(asynctest.TestCase):
     def setUp(self):
-        self._notifier = Notifier()
-        self._notifier2 = Notifier()
+        self._notifier = Notifier(lambda: True, 'notifier')
+        self._notifier2 = Notifier(self.cbk, 'notifier2')
         self.cbk_called = 0
 
     def cbk(self):
         self.cbk_called += 1
+        return False
 
     async def test_first(self):
-        cbk = self.cbk
-        self._notifier.add_observer(cbk, None)
+        self._notifier.add_observer(self._notifier2)
         await asyncio.sleep(0.1)
         self.assertEqual(self.cbk_called, 0)
 
@@ -33,8 +33,7 @@ class NotifierTests(asynctest.TestCase):
         self.assertEqual(self.cbk_called, 1)
 
     async def test_dont_call_multiple(self):
-        cbk = self.cbk
-        self._notifier.add_observer(cbk, None)
+        self._notifier.add_observer(self._notifier2)
         await asyncio.sleep(0.1)
         self.assertEqual(self.cbk_called, 0)
 
@@ -137,10 +136,10 @@ class SimpleReactiveAsync(asynctest.TestCase):
         res = await async_sum(a=a, b=b)
         a.set(6)
         await wait_for_var(res)
-        self.assertEqual(unwrap(res), 11)  # 6+5
+        self.assertEqual(11, unwrap(res))  # 6+5
         b.set(3)
         await wait_for_var(res)
-        self.assertEqual(unwrap(res), 9)  # 6+3
+        self.assertEqual(9, unwrap(res))  # 6+3
 
     async def test_exception_propagation(self):
         a = var(3)
@@ -219,16 +218,17 @@ class ReactiveWithYield(asynctest.TestCase):
         self.assertIsInstance(res, Wrapped)
         await wait_for_var(res)
         gc.collect()
-        self.assertEqual(inside, 0)
         self.assertIsNotNone(unwrap_exception(res))
+        self.assertEqual(0, inside)
         with self.assertRaisesRegex(Exception, r'.*b.*'):
             unwrap(res)
         b.set(5)
         await wait_for_var(res)
+        await asyncio.sleep(0.1)
         gc.collect()
-        self.assertEqual(inside, 1)
         self.assertIsNone(unwrap_exception(res))
-        self.assertEqual(unwrap(res), 7)
+        self.assertEqual(7, unwrap(res))
+        self.assertEqual(1, inside)
 
 
 @reactive_finalizable
@@ -335,22 +335,26 @@ class OtherDeps(asynctest.TestCase):
         a = var(None)
         res = inc_called_times(a)
         await wait_for_var(res)
-        self.assertEqual(called_times, 1)
+        unwrap(res)
+        self.assertEqual(1, called_times)
 
         a @= 55
         await wait_for_var(res)
         await asyncio.sleep(0.1)
-        self.assertEqual(called_times, 2)
+        unwrap(res)
+        self.assertEqual(2, called_times)
 
         some_observable.__notifier__.notify_observers()
         await wait_for_var(res)
         await asyncio.sleep(1)
-        self.assertEqual(called_times, 3)
+        unwrap(res)
+        self.assertEqual(3, called_times)
 
         some_observable.__notifier__.notify_observers()
         await wait_for_var(res)
         await asyncio.sleep(1)
-        self.assertEqual(called_times, 4)
+        unwrap(res)
+        self.assertEqual(4, called_times)
 
 
 called_times2 = 0
@@ -374,18 +378,18 @@ class DepOnlyArgs(asynctest.TestCase):
         a = var(55)
         res = inc_called_times2(a, ignored_arg=self.observable1)
         await wait_for_var(res)
-        self.assertEqual(called_times2, 1)
-        self.assertEqual(res, 55)
+        self.assertEqual(55, res)
+        self.assertEqual(1, called_times2)
 
         a @= 10
         await wait_for_var(res)
-        self.assertEqual(called_times2, 2)
-        self.assertEqual(res, 10)
+        self.assertEqual(10, res)
+        self.assertEqual(2, called_times2)
 
         self.observable1.__notifier__.notify_observers()
         await wait_for_var(res)
-        self.assertEqual(called_times2, 3)
-        self.assertEqual(res, 10)
+        self.assertEqual(10, res)
+        self.assertEqual(3, called_times2)
 
     async def test_iterable(self):
         global called_times2
@@ -393,16 +397,18 @@ class DepOnlyArgs(asynctest.TestCase):
         a = var(55)
         res = inc_called_times2(a, ignored_arg=[self.observable1, self.observable2])
         await wait_for_var(res)
-        self.assertEqual(called_times2, 1)
-        self.assertEqual(res, 55)
+        self.assertEqual(55, res)
+        self.assertEqual(1, called_times2)
 
         self.observable1.__notifier__.notify_observers()
         await wait_for_var(res)
-        self.assertEqual(called_times2, 2)
+        self.assertEqual(55, res)
+        self.assertEqual(2, called_times2)
 
         self.observable2.__notifier__.notify_observers()
         await wait_for_var(res)
-        self.assertEqual(called_times2, 3)
+        self.assertEqual(55, res)
+        self.assertEqual(3, called_times2)
 
 
 @reactive
@@ -426,12 +432,13 @@ class DefaultArgs(asynctest.TestCase):
         res = func_with_default(5)
         self.assertTrue(isinstance(res, Wrapped))
         await wait_for_var(res)
-        self.assertEqual(called_times2, 1)
-        self.assertEqual(unwrap(res), 8)
+        self.assertEqual(1, called_times2)
+        self.assertEqual(8, unwrap(res))
         some_observable @= 100
         await wait_for_var(res)
-        self.assertEqual(called_times2, 2)
-        self.assertEqual(unwrap(res), 105)
+        unwrap(res)
+        self.assertEqual(2, called_times2)
+        self.assertEqual(105, unwrap(res))
 
     async def test_with_const_default_arg(self):
         global some_observable
@@ -464,16 +471,16 @@ class PassArgs(asynctest.TestCase):
         res = pass_args(a, b)
         self.assertTrue(isinstance(res, Wrapped))
         await wait_for_var(res)
-        self.assertEqual(called_times2, 1)
-        self.assertEqual(unwrap(res), 8)
+        self.assertEqual(8, unwrap(res))
+        self.assertEqual(1, called_times2)
         a @= 10
         await wait_for_var(res)
-        self.assertEqual(called_times2, 1)
-        self.assertEqual(unwrap(res), 8)
+        self.assertEqual(8, unwrap(res))
+        self.assertEqual(1, called_times2)
         b @= 100
         await wait_for_var(res)
-        self.assertEqual(called_times2, 2)
-        self.assertEqual(unwrap(res), 110)
+        self.assertEqual(110, unwrap(res))
+        self.assertEqual(2, called_times2)
 
 
 # ====================================================================

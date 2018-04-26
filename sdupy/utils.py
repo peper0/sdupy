@@ -1,6 +1,7 @@
 import logging
 from functools import wraps
 
+
 #FIXME: rename to "log_errors" or "errors_to_log"
 def ignore_errors(f=None, *, retval=None):
     def wrap(f):
@@ -19,16 +20,19 @@ def ignore_errors(f=None, *, retval=None):
         return wrap
 
 
+logger = logging.getLogger('trace')
+
+
 def trace(f=None):
     def wrap(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             try:
                 res = f(*args, **kwargs)
-                print("------------ {}({} {}) -> {}".format(f.__name__, args, kwargs, res))
+                logger.info("{}({} {}) -> {}".format(f.__name__, args, kwargs, res))
                 return res
             except Exception as e:
-                print("------------ {}({} {}) # {}".format(f.__name__, args, kwargs, e))
+                logger.info("{}({} {}) # {}".format(f.__name__, args, kwargs, e))
                 raise
         return wrapper
 

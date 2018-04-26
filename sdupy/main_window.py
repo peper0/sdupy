@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
+from sdupy.pyreactive.notifier import ScopedName
 from . import widgets
 from .widgets.common.register import FactoryDesc
 
@@ -63,7 +64,7 @@ class MainWindow(QMainWindow):
         self.add_menu.addAction(factory_desc.pretty_name, add_widget)
 
     def add_widget_from_factory(self, factory_desc: FactoryDesc, widget_name, title):
-        widget = factory_desc.factory(parent=self)
+        widget = factory_desc.factory(parent=self, name=widget_name)
         self.add_widget(widget, factory_desc.name, widget_name, title)
         return widget
 

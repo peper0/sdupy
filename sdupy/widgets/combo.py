@@ -8,7 +8,7 @@ from . import register_widget, QtPropertyVar
 
 @register_widget("selector")
 class ComboBox(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)

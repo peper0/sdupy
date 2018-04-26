@@ -10,13 +10,14 @@ from pyqtgraph.parametertree import ParameterTree, Parameter
 import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
+from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, TriggerIfVisible
 from sdupy.vis.globals import global_refs
+from sdupy.progress import Progress
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
-from sdupy.widgets.pyqtgraph import PgParamTree, PgPlot, TaskParameter
-from stitching.progress import Progress
+from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -79,10 +80,9 @@ def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zv
 
 
 def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
-    print("image_pg")
-    #items = [make_pg_image_item(image_to_pg(image, is_bgr, True), **kwargs)] if image is not None else []
-    items = [make_pg_image_item(image, **kwargs)] if image is not None else []
-    draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
+    with ScopedName(name=widget_name+('.'+label if label else '')):
+        items = [make_pg_image_item(image, **kwargs)] if image is not None else []
+        draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
 def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, **kwargs):
@@ -146,6 +146,7 @@ def clear_variables(widget_name: str):
 
 
 def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, window=None):
+
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var

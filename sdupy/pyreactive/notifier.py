@@ -1,12 +1,11 @@
 import logging
 import weakref
 from _weakrefset import WeakSet
-from typing import Dict, Iterable, Union
-from weakref import WeakKeyDictionary
 
 from sdupy.pyreactive.common import NotifyFunc
 from sdupy.pyreactive.refresher import get_default_refresher
 
+logger = logging.getLogger('notify')
 
 def is_hashable(v):
     """Determine whether `v` can be hashed."""
@@ -25,10 +24,10 @@ class DummyNotifier:
     def __init__(self, priority):
         self.priority = priority
 
-    def add_observer(self, notify_func: NotifyFunc, notifiers: Union['Notifier', Iterable['Notifier'], None]):
+    def add_observer(self, notifier: 'Notifier'):
         pass
 
-    def remove_observer(self, notify_func: NotifyFunc):
+    def remove_observer(self, notifier: 'Notifier'):
         pass
 
     def notify_observers(self):
@@ -54,64 +53,68 @@ def min_not_none(a, b):
 
 
 all_notifiers = WeakSet()
-stats_for_notify_func = WeakKeyDictionary()  # type: Dict[NotifyFunc, Dict]
+
+_got_finals = 0
+
+class ScopedName:
+    names = []
+
+    def __init__(self, name, final=False):
+        self.name = name
+        self.final = final
+
+    def __enter__(self):
+        global _got_finals
+        if self.name is not None and _got_finals == 0:
+            self.names.append(self.name)
+        if self.final:
+            _got_finals += 1
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global _got_finals
+        if self.final:
+            _got_finals -= 1
+        if self.name is not None and _got_finals == 0:
+            res = self.names.pop()
+            assert res == self.name
 
 
 class Notifier:
-    class Observer:
-        def __init__(self, notifiers, notify_func: NotifyFunc, name):
-            self.priority = None  # we start from 0, then it can be increased but never decreased
-            self.notifiers = WeakSet(notifiers)
-            self.stats = stats_for_notify_func.setdefault(notify_func, dict(name=name))
-
-    def __init__(self, name):
-        self._observers = weakref.WeakKeyDictionary()  # type: Dict[NotifyFunc, self.Observer]
+    def __init__(self, notify_func: NotifyFunc = lambda: True):
+        self._observers = weakref.WeakSet()  # type: Set[Notifier]
         self._priority = 0
-        self.name = name
+        self.name = '/'.join(ScopedName.names)
+        assert is_notify_func(notify_func)
+        self.notify_func = notify_func
         self.calls = 0
+        self.stats = dict()
         all_notifiers.add(self)
         #  lowest called first; should be greater than all observed
 
+    def notify(self):
+        return self.notify_func()  # may return awaitable
+
     def notify_observers(self):
         self.calls += 1
-        for notify_func, observer in self._observers.items():
-            get_default_refresher().schedule_call(notify_func, notify_func, observer.priority, observer.stats)
+        for observer in self._observers:
+            get_default_refresher().schedule_call(observer)
 
-    def add_observer(self, notify_func: NotifyFunc, notifiers: Union['Notifier', Iterable['Notifier'], None],
-                     name=None):
+    def add_observer(self, observer: 'Notifier'):
         """
-
-        :param notify_func: A callback that will be called (WARNING! it must be owned somewhere else; it's especially
+        :param observer: A notifier that will be notified (WARNING! it must be owned somewhere else; it's especially
                        important for bound methods or partially bound functions). It must be hashable and equality
-                       comparable. If there are more than one calls to `notify` pending, they are reduced to one only.
-        :param notifiers: A notifiers that will take part in the topological sort when obtaining an order of
-                         notifications. Their priority will be enforced to be greater than the priority of this object.
-        :return:
+                       comparable. If there are more than one calls to the same notifier pending, they are reduced to
+                       one only. It will take part in the topological sort when obtaining an order of
+                       notifications. It's priority will be enforced to be greater than the priority of this object.
         """
-        assert is_notify_func(notify_func)
-        # if priority is not None and priority <= self._priority:
-        #    warn("priority of the observer should be greater than the priority of the observable")
-        if notifiers is None:
-            notifiers = []
-        if not hasattr(notifiers, '__iter__'):
-            notifiers = [notifiers]
-        observer = self.Observer(notifiers, notify_func, name or notify_func.__name__)
         self._update_observer_priority(observer)
-        self._observers[notify_func] = observer
+        self._observers.add(observer)
 
-    def _update_observer_priority(self, observer: 'Notifier.Observer'):
-        """
-        Set priorities of all notifers depending on given observer to be greater than ours and save min of them in the
-        observer
-        """
-        priority = None
-        for notifier in observer.notifiers:
-            notifier.priority = max_not_none(notifier.priority, self.priority + 1)
-            priority = min_not_none(priority, notifier.priority)
-        observer.priority = priority if priority is not Notifier else self.priority + 1
+    def _update_observer_priority(self, observer: 'Notifier'):
+        observer.priority = max(observer.priority, self.priority + 1)
 
-    def remove_observer(self, notify_func: NotifyFunc):
-        del self._observers[notify_func]
+    def remove_observer(self, observer: 'Notifier'):
+        self._observers.remove(observer)
 
     @property
     def priority(self):
@@ -121,7 +124,7 @@ class Notifier:
     def priority(self, value):
         assert self._priority is None or self._priority <= value
         self._priority = value
-        for observer in self._observers.values():
+        for observer in self._observers:
             self._update_observer_priority(observer)
 
 

@@ -2,7 +2,7 @@ from typing import Any, Callable, Iterable, Sequence, Tuple
 
 from sdupy.pyreactive.common import unwrap
 from .decorators import reactive
-from .notifier import Notifier
+from .notifier import Notifier, ScopedName
 
 
 def get_subnotifier(self: Notifier, name: str) -> Notifier:
@@ -71,7 +71,8 @@ def add_reactive_forwarders(cl: Any, functions: Iterable[Tuple[str, Callable]]):
             def reactive_f(self_unwrapped, *args):
                 return func(self_unwrapped, *args)
 
-            return reactive_f(self._target(), *args)
+            with ScopedName(name=name, final=True):
+                return reactive_f(self._target(), *args)
 
         setattr(cl, name, wrapped)
 

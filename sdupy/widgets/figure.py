@@ -21,7 +21,7 @@ MODIFIER_KEYS = set(['shift', 'control', 'alt'])
 #FIXME: rename to MplFigure
 @register_widget("matplotlib figure")
 class Figure(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)

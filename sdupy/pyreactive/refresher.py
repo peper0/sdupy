@@ -4,15 +4,21 @@ import logging
 from contextlib import suppress
 from typing import Any, Callable, NamedTuple
 
+import sys
+
 from sdupy.pyreactive.common import NotifyFunc
 
-logger = logging.getLogger('refresher')
+stderr_logger_handler = logging.StreamHandler(stream=sys.stderr)
+stderr_logger_handler.setLevel(logging.DEBUG)
+logger = logging.getLogger('notify')
+logger.addHandler(stderr_logger_handler)
+logger.setLevel(logging.INFO)
 
 
 class QueueItem(NamedTuple):
     priority: int
     id: Any  # FIXME: remove id (callable MUST be hashable, we use wrapper if it isn't)
-    func: Callable
+    notifier: 'Notifier'
     stats: dict
 
     def __lt__(self, other):
@@ -39,10 +45,9 @@ class AsyncRefresher:
             logger.exception('refresh task finished with exception, rethrowing')
             raise e
 
-    def schedule_call(self, func: NotifyFunc, id, priority, stats):
-        if priority is None:
-            priority = 999999
-        t = QueueItem(priority, id, func, stats)
+    def schedule_call(self, notifier: 'Notifier'):
+        logger.debug('  scheduled notification ({}) [{:X}] {}'.format(notifier.priority, id(notifier), notifier.name))
+        t = QueueItem(notifier.priority, notifier, notifier, notifier.stats)
         self.queue.put_nowait(t)
         self.maybe_start_task()
 
@@ -50,26 +55,44 @@ class AsyncRefresher:
         gc.collect()
         update_next = None
 
+        notified_notifiers = set()
         with suppress(asyncio.QueueEmpty):  # it's ok - if the queue is empty we just exit
             while True:
-                update = update_next if update_next else self.queue.get_nowait()  # type: QueueItem
+                notification = update_next if update_next else self.queue.get_nowait()  # type: QueueItem
                 try:
                     update_next = self.queue.get_nowait()
-                    if update_next.id == update.id:  # skip update if is same as next
+                    if update_next.id == notification.id:  # skip notification if is same as next
                         continue
                 except asyncio.QueueEmpty:
                     update_next = None
 
                 try:
-                    update.stats['calls'] = update.stats.get('calls', 0) + 1
-                    f = update.func
-                    res = f()
+                    notification.stats['calls'] = notification.stats.get('calls', 0) + 1
+                    notifier = notification.notifier
+                    if notifier in notified_notifiers:
+                        logger.warning('notifier [{:X}] {} called more than once'.format(id(notifier), notifier.name))
+                    notified_notifiers.add(notifier)
+                    logger.debug('call notification ({}) [{:X}] {}'.format(notifier.priority, id(notifier),
+                                                                         notifier.name))
+
+                    res = notifier.notify()
                     if asyncio.iscoroutine(res):
-                        await res
-                    update.stats['exception'] = None
+                        res = await res
+                    notification.stats['exception'] = None
+
+                    assert isinstance(res, bool), "res has type {}, should be bool".format(type(res))
+                    if res:
+                        logger.debug(' notification finished with True, notifying observers')
+                        notification.notifier.notify_observers()
+                        logger.debug(' finished')
+                    else:
+                        logger.debug(' notification finished with False')
+
+
+
                 except Exception as e:
-                    logger.exception('ignoring exception when in notifying observer {}'.format(update.func))
-                    update.stats['exception'] = e
+                    logger.exception('ignoring exception when in notifying observer {}'.format(notification.notifier))
+                    notification.stats['exception'] = e
         gc.collect()
 
 
