@@ -59,7 +59,7 @@ class Slider(QWidget):
 
     @reactive
     def _set_all_to(self, value):
-        print("set all to ", value)
+        #print("set all to ", value)
         if self._uses_integer():
             value = int(round(value))
         set_if_inequal(self._slider_val, value * self._slider_mult)

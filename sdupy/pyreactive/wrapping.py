@@ -67,12 +67,12 @@ def add_reactive_forwarders(cl: Any, functions: Iterable[Tuple[str, Callable]]):
 
     def add_one(cl: Any, name, func):
         def wrapped(self, *args):
-            @reactive
+            @reactive  # fixme: we should rather forward to the _target, not to __inner__
             def reactive_f(self_unwrapped, *args):
                 return func(self_unwrapped, *args)
 
             with ScopedName(name=name, final=True):
-                return reactive_f(self._target(), *args)
+                return reactive_f(self, *args)
 
         setattr(cl, name, wrapped)
 

@@ -70,7 +70,7 @@ class AsyncRefresher:
                     notification.stats['calls'] = notification.stats.get('calls', 0) + 1
                     notifier = notification.notifier
                     if notifier in notified_notifiers:
-                        logger.warning('notifier [{:X}] {} called more than once'.format(id(notifier), notifier.name))
+                        logger.debug('notifier [{:X}] {} called more than once'.format(id(notifier), notifier.name))
                     notified_notifiers.add(notifier)
                     logger.debug('call notification ({}) [{:X}] {}'.format(notifier.priority, id(notifier),
                                                                          notifier.name))
@@ -80,7 +80,8 @@ class AsyncRefresher:
                         res = await res
                     notification.stats['exception'] = None
 
-                    assert isinstance(res, bool), "res has type {}, should be bool".format(type(res))
+                    assert isinstance(res, bool), "res has type {}, should be bool for {}".format(type(res),
+                                                                                                  notifier.name)
                     if res:
                         logger.debug(' notification finished with True, notifying observers')
                         notification.notifier.notify_observers()

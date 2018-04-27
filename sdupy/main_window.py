@@ -41,6 +41,9 @@ class MainWindow(QMainWindow):
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.add_menu)
 
+        self.remove_menu = QMenu('&Remove widget', self)
+        self.menuBar().addMenu(self.remove_menu)
+
         self.close_callback = None
 
         self.resize(400, 400)  # workaround some bugs
@@ -64,8 +67,23 @@ class MainWindow(QMainWindow):
         self.add_menu.addAction(factory_desc.pretty_name, add_widget)
 
     def add_widget_from_factory(self, factory_desc: FactoryDesc, widget_name, title):
-        widget = factory_desc.factory(parent=self, name=widget_name)
-        self.add_widget(widget, factory_desc.name, widget_name, title)
+        docked = QDockWidget(title)
+        widget = factory_desc.factory(parent=docked, name=widget_name)
+        #self.add_widget(widget, factory_desc.name, widget_name, title)
+        docked.setObjectName(title)
+        docked.setWidget(widget)
+        assert widget_name not in self.widgets
+        self.widgets[widget_name] = WidgetInstance(widget=widget, name=widget_name, dock_widget=docked,
+                                                   factory_name=factory_desc.name)
+        self.addDockWidget(Qt.RightDockWidgetArea, docked)
+
+        action_listref = []
+        def remove_widget():
+            self.remove_widget(widget_name)
+            self.remove_menu.removeAction(action_listref[0])
+
+        action_listref.append(self.remove_menu.addAction(widget_name, remove_widget))
+
         return widget
 
     def generate_widget_name(self, base):
@@ -84,15 +102,6 @@ class MainWindow(QMainWindow):
         for title in generate_titles():
             if all((title != i.dock_widget.windowTitle() for i in self.widgets.values())):
                 return title
-
-    def add_widget(self, widget: QWidget, factory_name, widget_name, title):
-        docked = QDockWidget(title)
-        docked.setObjectName(title)
-        docked.setWidget(widget)
-        assert widget_name not in self.widgets
-        self.widgets[widget_name] = WidgetInstance(widget=widget, name=widget_name, dock_widget=docked,
-                                                   factory_name=factory_name)
-        self.addDockWidget(Qt.RightDockWidgetArea, docked)
 
     def remove_widget(self, widget_name):
         self.removeDockWidget(self.widgets[widget_name].dock_widget)
@@ -154,7 +163,7 @@ class MainWindow(QMainWindow):
         if 'widgets' in state:
             for widget_name, factory_name, title, widget_state in state['widgets']:
                 try:
-                    logging.info("restoring state of '{}'".format(title))
+                    logging.debug("restoring state of '{}'".format(title))
                     widget = self.add_widget_from_factory(widgets.registered_factories[factory_name], widget_name,
                                                           title)
                     if widget_state:

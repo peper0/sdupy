@@ -12,6 +12,7 @@ from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier, ScopedName
+from .refresher import logger
 
 
 class Wrapper(Wrapped):
@@ -332,7 +333,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def __inner__(self):
         self._update_if_dirty()
         if self._exception is not None:
-            raise self._exception
+            raise Exception() from self._exception
         if self._ref is not None and hasattr(self._ref, '__inner__'):
             return self._ref.__inner__
 
@@ -371,8 +372,8 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _update_if_dirty(self):
         if self._dirty:
             # FIXME: doesn't work for async updates
+            logger.debug('updating {}'.format(self._notifier.name))
             self._update()
-            print("update bo dirty", repr(self))
             self._dirty = False
 
     def _args_changed(self):

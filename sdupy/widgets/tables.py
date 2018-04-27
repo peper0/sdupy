@@ -11,15 +11,16 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 
 from sdupy.pyreactive import unwrap_exception
-from sdupy.pyreactive.notifier import Notifier
+from sdupy.pyreactive.notifier import Notifier, ScopedName
 from sdupy.utils import ignore_errors
+from sdupy.widgets.hepers import trigger_if_visible
 from .common.register import register_factory, register_widget
 from ..pyreactive import Wrapped, reactive, unwrap
 
 
 @register_widget("generic table")
 class Table(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
@@ -27,6 +28,7 @@ class Table(QWidget):
         self._table_view = QTableView(self)
         self._table_view.horizontalHeader().setSectionsMovable(True)
         self.layout.addWidget(self._table_view)
+        self.visibilityChanged = parent.visibilityChanged  # FIXME:
 
     def dump_state(self):
         return dict(
@@ -40,8 +42,8 @@ class Table(QWidget):
 
 @register_widget("variables table")
 class VarsTable(Table):
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, name):
+        super().__init__(parent, name)
         self.model = VarsModel(self)
         self._table_view.setModel(self.model)
 
@@ -52,7 +54,7 @@ class VarsTable(Table):
 
 class VarsModel(QAbstractTableModel):
     class VarInList(NamedTuple):
-        title: str
+        name: str
         var: Wrapped
         notifier: Notifier
         to_value: Callable[[str], Any]
@@ -75,7 +77,7 @@ class VarsModel(QAbstractTableModel):
                 item = self.vars[index.row()]
                 if role == Qt.DisplayRole or role == Qt.EditRole or role == Qt.ToolTipRole:
                     if index.column() == 0:
-                        return item.title
+                        return item.name
                     elif index.column() == 1:
                         try:
                             return str(unwrap(item.var))
@@ -107,8 +109,8 @@ class VarsModel(QAbstractTableModel):
                 return True
         return super().setData(index, value, role)
 
-    def remove_var(self, title):
-        indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.title == title]
+    def remove_var(self, name):
+        indices_for_removal = [i for i, var_in_the_list in enumerate(self.vars) if var_in_the_list.name == name]
 
         for i in reversed(indices_for_removal):
             self.beginRemoveRows(QModelIndex(), i, i)
@@ -121,20 +123,22 @@ class VarsModel(QAbstractTableModel):
             self.vars.clear()
             self.endRemoveRows()
 
-    def insert_var(self, title: str, var: Wrapped, to_value: Callable[[str], Any]):
+    def insert_var(self, name: str, var: Wrapped, to_value: Callable[[str], Any]):
         assert var is not None
-        self.remove_var(title)
+        self.remove_var(name)
 
         def notify_changed():
             for i, var_in_the_list in enumerate(self.vars):
                 if var_in_the_list.var is var:
                     self.dataChanged.emit(self.index(i, 1), self.index(i, 1))
+            return True
 
-        notifier = Notifier(notify_changed, 'var ' + title + ' in table')
+        with ScopedName('var {} in table'.format(name)):
+            notifier = Notifier(notify_changed)
         var.__notifier__.add_observer(notifier)
 
         self.beginInsertRows(QModelIndex(), len(self.vars), len(self.vars))
-        self.vars.append(VarsModel.VarInList(title=title, var=var, notifier=notifier, to_value=to_value))
+        self.vars.append(VarsModel.VarInList(name=name, var=var, notifier=notifier, to_value=to_value))
         self.endInsertRows()
 
     @ignore_errors
@@ -149,7 +153,7 @@ class VarsModel(QAbstractTableModel):
 class ArrayTable(QWidget):
     DEFAULT_FORMAT = '{}'  # '{:.3g}' is good for floats, but there can be a nonfloat
 
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
@@ -162,7 +166,7 @@ class ArrayTable(QWidget):
         self._var = None
         self._setter = None
         self._set_current_val(np.array([[]]))
-
+        self.visibilityChanged = parent.visibilityChanged  # FIXME:
 
     @property
     def var(self):
@@ -185,7 +189,7 @@ class ArrayTable(QWidget):
         self.update()
 
     def update(self):
-        self._setter = reactive(self._set_current_val)(self._var)
+        self._setter = trigger_if_visible(reactive(self._set_current_val)(self._var), self)
 
     def _set_current_val(self, val):
         self._model = ArrayModel(val, self)
@@ -196,7 +200,9 @@ class ArrayTable(QWidget):
 class ArrayModel(QAbstractTableModel):
     def __init__(self, array: np.ndarray, parent=None):
         super().__init__(parent)
-        assert hasattr(array, 'shape')
+        if array is None:
+            array = np.eye(0)
+        assert hasattr(array, 'shape'), "expected array, got {} of type {}".format(array, type(array))
         assert hasattr(array, '__getitem__')
         self._array = array  # type: np.ndarray
         self.format = None
@@ -485,6 +491,6 @@ global_logger_handler.setLevel(logging.INFO)
 
 @register_widget("logs")
 class Logs(Table):
-    def __init__(self, parent):
+    def __init__(self, parent, name):
         super().__init__(parent)
         self._table_view.setModel(global_logger_handler)

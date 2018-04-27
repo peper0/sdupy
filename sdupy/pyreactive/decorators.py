@@ -69,6 +69,9 @@ class DecoratedFunction:
             logging.error("instance is None")
         return functools.partial(self.__call__, instance)
 
+    def __str__(self):
+        return 'DecoratedFunction({})'.format(self.callable)
+
 
 
 @overload

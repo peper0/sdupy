@@ -29,4 +29,4 @@ async def reporting_progress(seq: Sequence, progress: Progress, size=None):
         yield e
         if progress is not None:
             progress.set_progress((i+1)/size)
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.001)
