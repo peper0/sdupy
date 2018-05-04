@@ -7,6 +7,7 @@ from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
 from sdupy.pyreactive.notifier import ScopedName
+from sdupy.utils import ignore_errors
 from . import widgets
 from .widgets.common.register import FactoryDesc
 
@@ -33,7 +34,7 @@ class MainWindow(QMainWindow):
         self.widgets = {}  # type: Dict[str, WidgetInstance]
 
         self.file_menu = QMenu('&File', self)
-        a = self.file_menu.addAction('&Save layout', self.save_state_action, Qt.CTRL + Qt.Key_S)
+        a = self.file_menu.addAction('&Save layout', ignore_errors(self.save_state_action), Qt.CTRL + Qt.Key_S)
         a.setEnabled(bool(self.persistence_id))
         self.menuBar().addMenu(self.file_menu)
 

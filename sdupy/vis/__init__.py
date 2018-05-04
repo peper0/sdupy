@@ -130,11 +130,13 @@ graph = graph_pg
 def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     w = widget(widget_name, PgPlot, window=window)
     global_refs[(w, label)] = trigger_if_visible(make_plot_item_pg(w.view, *args, **kwargs), w)
+    return global_refs[(w, label)]
 
 
 def scatter_pg(widget_name: str, data, label=None, window=None):
     w = widget(widget_name, PgScatter, window=window)
     global_refs[(w, label)] = trigger_if_visible(set_scatter_data_pg(w, data), w)
+    return global_refs[(w, label)]
 
 
 def data_tree_pg(widget_name: str, tree, window=None, **kwargs):

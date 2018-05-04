@@ -1,11 +1,10 @@
 import asyncio
 import logging
 from math import isfinite
-from typing import Any, Mapping, Tuple
 
-import networkx as nx
 import pyqtgraph as pg
 from PyQt5.QtCore import QPointF
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
@@ -13,7 +12,6 @@ from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 from sdupy.progress import Progress
 from sdupy.utils import ignore_errors
 from . import register_widget
-from ..pyreactive import reactive_finalizable
 
 
 class PgOneItem(pg.GraphicsView):
@@ -135,15 +133,65 @@ class PgImage(pg.ImageView):
 class PgScatter(pg.ScatterPlotWidget):
     def __init__(self, parent, name):
         super().__init__(parent)
+        self._show_cursor_proxy = None
+        self.state_to_load = {}
+
+        self.info_label = pg.TextItem(border=QColor(128, 128, 128))
+        self.info_label.setPos(60, 60)
+        self.info_label.setParentItem(self.plot.plotItem)
+        self.show_info()
 
     def dump_state(self):
+        filter_state = self.filter.saveState()
+        filter_state['addList'] = list(filter_state['addList'])
+
         return dict(
-            view_state=self.getView().saveState(),
+            filter_state=filter_state,
+            colormap_state=self.colorMap.saveState()
         )
 
-    def load_state(self, state: dict):
-        if 'view_state' in state:
-            self.getView().restoreState(state['view_state'])
+    def show_info(self, show=True):
+        if self._show_cursor_proxy:
+            self._show_cursor_proxy.disconnect()
+            self._show_cursor_proxy = None
+
+        plot_item = self.plot.plotItem
+
+        if show:
+            @ignore_errors
+            def mouseMoved(evt):
+                view_point = plot_item.vb.mapSceneToView(evt[0])
+                points = self.scatterPlot.scatter.pointsAt(view_point)
+                text = ''
+                for p in points:
+                    for k, v in zip(self.fields.keys(), p.data()):
+                        text += '{}: {}\n'.format(k, v)
+                    text += '\n'
+                self.info_label.setText(text)
+                print(text)
+
+            self._show_cursor_proxy = pg.SignalProxy(plot_item.scene().sigMouseMoved, rateLimit=15, slot=mouseMoved)
+
+
+            self.info_label.setVisible(True)
+        else:
+            self.info_label.setVisible(True)
+
+
+    # def load_state(self, state: dict):
+    #     self.state_to_load = state
+    #
+    # def _really_load_state(self):
+    #     state = self.state_to_load
+    #     if 'filter_state' in state:
+    #         self.filter.restoreState(state['filter_state'])
+    #     if 'colormap_state' in state:
+    #         self.colorMap.restoreState(state['colormap_state'])
+    #
+    # def setData(self, data):
+    #     super().setData(data)
+    #     self._really_load_state()
+
 
 @register_widget("pyqtgraph data tree")
 class PgDataTree(pg.DataTreeWidget):
