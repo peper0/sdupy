@@ -13,12 +13,12 @@ from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
-from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg
+from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg
 from sdupy.widgets.hepers import trigger_if_visible
 from sdupy.vis.globals import global_refs
 from sdupy.progress import Progress
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
-from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter
+from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -130,6 +130,11 @@ graph = graph_pg
 def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     w = widget(widget_name, PgPlot, window=window)
     global_refs[(w, label)] = trigger_if_visible(make_plot_item_pg(w.view, *args, **kwargs), w)
+
+
+def scatter_pg(widget_name: str, data, label=None, window=None):
+    w = widget(widget_name, PgScatter, window=window)
+    global_refs[(w, label)] = trigger_if_visible(set_scatter_data_pg(w, data), w)
 
 
 def data_tree_pg(widget_name: str, tree, window=None, **kwargs):

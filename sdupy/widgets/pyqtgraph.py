@@ -131,6 +131,20 @@ class PgImage(pg.ImageView):
             self.getHistogramWidget().region.setRegion(state['colormap_region'])
 
 
+@register_widget("pyqtgraph scatter plot")
+class PgScatter(pg.ScatterPlotWidget):
+    def __init__(self, parent, name):
+        super().__init__(parent)
+
+    def dump_state(self):
+        return dict(
+            view_state=self.getView().saveState(),
+        )
+
+    def load_state(self, state: dict):
+        if 'view_state' in state:
+            self.getView().restoreState(state['view_state'])
+
 @register_widget("pyqtgraph data tree")
 class PgDataTree(pg.DataTreeWidget):
     def __init__(self, parent, name):
