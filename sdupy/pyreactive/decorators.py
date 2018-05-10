@@ -26,7 +26,7 @@ class Reactive:
                 from .var import AsyncReactiveProxy
                 res = AsyncReactiveProxy(decorated, args, kwargs)
                 if args_need_reaction(res.args, res.kwargs):
-                    return res._update(res, reraise=True)
+                    return res._update(res)
                 else:
                     return decorated.callable(*args, **kwargs)
         elif hasattr(func, '__call__'):
@@ -35,7 +35,7 @@ class Reactive:
                 from .var import SyncReactiveProxy
                 res = SyncReactiveProxy(decorated, args, kwargs)
                 if args_need_reaction(res.args, res.kwargs):
-                    return res._update(res, reraise=True)
+                    return res._update(res)
                 else:
                     return decorated.callable(*args, **kwargs)
         else:
@@ -122,13 +122,13 @@ class ReactiveCm(Reactive):
                 # import here to avoid circular dependency (AsyncReactiveProxy does Reactive.__call__ for it's members)
                 from .var import AsyncCmReactiveProxy
                 res = AsyncCmReactiveProxy(decorated, args, kwargs)
-                return res._update(res, reraise=True)
+                return res._update(res)
 
         elif hasattr(func, '__call__'):
             def factory(decorated, args, kwargs):
                 from .var import CmReactiveProxy
                 res = CmReactiveProxy(decorated, args, kwargs)
-                return res._update(res, reraise=True)
+                return res._update(res)
         else:
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(func)))
         return DecoratedFunction(self, factory, func)

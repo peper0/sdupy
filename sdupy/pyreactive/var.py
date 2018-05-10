@@ -68,7 +68,6 @@ class Constant(Wrapped, ConstForwarders):
         return getattr(self._target().__inner__, item)
 
 
-
 def const(raw):
     return Constant(raw)
 
@@ -78,8 +77,7 @@ class NotInitializedError(Exception):
         super().__init__('not initialized')
 
 
-# FIXME: rename to "propagate error"
-class ArgumentError(Exception):
+class ForwardedError(Exception):
     """
     An exception that is silently propagated and not raised unless explicit unwrapping is done on the variable.
     """
@@ -192,7 +190,7 @@ def rewrap_args(args_helper: ArgsHelper, pass_args) -> Tuple[List[Any], Dict[str
             else:
                 return unwrapped(arg)
         except Exception as exception:
-            raise ArgumentError(name or str(index)) from exception
+            raise ForwardedError(name or str(index)) from exception
 
     return ([rewrap(index, name, arg) for index, name, arg in args_helper.iterate_args()],
             {name: rewrap(index, name, arg) for index, name, arg in args_helper.iterate_kwargs()})
@@ -373,7 +371,10 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         if self._dirty:
             # FIXME: doesn't work for async updates
             logger.debug('updating {}'.format(self._notifier.name))
-            self._update()
+            try:
+                self._update()
+            except Exception as e:
+                logging.exception('error when updating {}'.format(self._notifier.name))
             self._dirty = False
 
     def _args_changed(self):
@@ -441,8 +442,8 @@ class ReactiveProxy(LazySwitchableProxy):
         except Exception as e:
             self._exception = e
             if reraise:
-                if not isinstance(e, ArgumentError):
-                    # ArgumentError is not re-raised since it was
+                if not isinstance(e, ForwardedError):
+                    # ForwardedError is not re-raised by definition
                     raise e
 
     def _call(self):
@@ -455,21 +456,21 @@ class ReactiveProxy(LazySwitchableProxy):
         return self.decorated.callable(*args, **kwargs)
 
     @abstractmethod
-    def _update(self, retval=None, reraise=False):
+    def _update(self, retval=None):
         pass
 
 
 class SyncReactiveProxy(ReactiveProxy):
-    def _update(self, retval=None, reraise=False):
-        with self._handle_exception(reraise):
+    def _update(self, retval=None):
+        with self._handle_exception(reraise=True):
             res = self._call()
             self._set_ref(res)
         return retval
 
 
 class AsyncReactiveProxy(ReactiveProxy):
-    async def _update(self, retval=None, reraise=False):
-        with self._handle_exception(reraise):
+    async def _update(self, retval=None):
+        with self._handle_exception(reraise=True):
             res = await self._call()
             self._set_ref(res)
         return retval
@@ -480,10 +481,10 @@ class CmReactiveProxy(ReactiveProxy):
         super().__init__(*args, **kwargs)
         self.cm = None
 
-    def _update(self, retval=None, reraise=False):
+    def _update(self, retval=None):
         self._cleanup()
 
-        with self._handle_exception(reraise):
+        with self._handle_exception(reraise=True):
             self.cm = self._call()
             res = self.cm.__enter__()
             self._set_ref(res)
@@ -506,10 +507,10 @@ class AsyncCmReactiveProxy(ReactiveProxy):
         super().__init__(*args, **kwargs)
         self.cm = None
 
-    async def _update(self, retval=None, reraise=False):
+    async def _update(self, retval=None):
         await self._cleanup()
 
-        with self._handle_exception(reraise):
+        with self._handle_exception(reraise=True):
             self.cm = self._call()
             res = await self.cm.__aenter__()
             self._set_ref(res)
