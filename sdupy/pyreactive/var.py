@@ -315,12 +315,13 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         super().__init__()
         self.async = async
         self._ref = None
+        self._dirty = False
         if async:
             # I have no idea how to call do lazy updating if update is async (and getter isn't)
             self._notifier = Notifier(self._update_async)
         else:
             self._notifier = Notifier(self._args_changed)
-        self._dirty = False
+            self._dirty = True
         self._exception = None
 
     @property
