@@ -75,6 +75,8 @@ def levels_for(image: np.ndarray):
 
 @reactive
 def make_pg_image_item(image, extent=None, **kwargs):
+    if image is None:
+        return None
     image_args = kwargs
     image_args.setdefault('autoRange', False)
     image_args.setdefault('autoLevels', False)

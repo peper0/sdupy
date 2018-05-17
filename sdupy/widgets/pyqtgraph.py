@@ -298,7 +298,12 @@ class TaskParameterItem(ParameterItem):
                 self.progress_bar.setFormat('error (see tooltip)')
                 self.progress_bar.setToolTip('error: ' + str(task.exception()))
 
-                logging.error('task finished with error: ' + str(task.exception()))
+                try:
+                    raise task.exception()
+                except Exception:
+                    logging.exception('task finished with error')
+
+
             else:
                 self.progress_bar.setValue(1000)
                 self.progress_bar.setFormat('finished')

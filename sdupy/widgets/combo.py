@@ -29,6 +29,8 @@ class ComboBox(QWidget):
                 data = td
                 title = str(td)
             self.combo.addItem(title, data)
+        if self.combo.currentIndex() < 0:
+            self.combo.setCurrentIndex(0)
 
     def dump_state(self):
         return dict(
