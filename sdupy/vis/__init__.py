@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, Union, Sequence, Optional, Callable
+from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Coroutine
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -83,7 +83,9 @@ def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zv
 
 def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
     with ScopedName(name=widget_name+('.'+label if label else '')):
-        items = [make_pg_image_item(image, **kwargs)] if image is not None else []
+        items = [make_pg_image_item(image, **kwargs)]
+        if items[0] is None:
+            items = []
         draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
@@ -196,12 +198,17 @@ def array_table(widget_name: str, var: Wrapped=None, *, format:str=None, window=
     return w.var
 
 
+def paramtree_get_root_parameters(pt: ParameterTree) -> Sequence[Parameter]:
+    root = pt.invisibleRootItem()
+    return [root.child(i).param for i in range(root.childCount())]
+
+
 def _paramtree_find_child(parent, child_name):
     if isinstance(parent, ParameterTree):
         root = parent.invisibleRootItem()  # type: QTreeWidgetItem
-        for i in range(root.childCount()):
-            if root.child(i).text(0) == child_name:
-                return root.child(i).param
+        for i in paramtree_get_root_parameters(parent):
+            if i.name() == child_name:
+                return i
         return None
     elif isinstance(parent, Parameter):
         return parent.names.get(child_name)
@@ -217,10 +224,13 @@ def _paramtree_add_child(parent, param):
         parent.addParameters(param)
         return None
     elif isinstance(parent, Parameter):
-        child = parent.names.get(param.name())
+        child = parent.names.get(param.name())  # type: Parameter
         if child is not None:
+            grandchildren = child.children()
             parent.removeChild(child)
-        return parent.addChild(param)
+            param.addChildren(grandchildren)
+        new_child = parent.addChild(param)
+        return new_child
     raise Exception("parent has type {}".format(type(parent)))
 
 
@@ -263,8 +273,41 @@ def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wr
     return var
 
 
-def task_in_paramtree(widget_name: str, param_path: Sequence[str], name, func: Callable[[Progress], None] = None, *,
+def task_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[Progress], Coroutine] = None, *,
                       window=None):
+    *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)
-    param_in_paramtree(widget_name, param_path, param, window=window)
+    param_in_paramtree(widget_name, parent_path, param, window=window)
     return param
+
+
+def combo_in_paramtree(widget_name: str, param_path: Sequence[str], choices, var: Wrapped = None, *, window=None):
+    *parent_path, name = param_path
+    param = Parameter.create(name=name, type='list')
+    res = var_in_paramtree(widget_name, parent_path, param=param, var=var, window=window)
+    global_refs[(widget_name, tuple(param_path), 'limits')] = volatile(reactive(param.setLimits)(choices))
+    return res
+
+
+def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=False, var: Wrapped = None, *,
+                      window=None):
+    *parent_path, name = param_path
+    return var_in_paramtree(widget_name, parent_path,
+                            param=Parameter.create(name=name, type='text' if multiline else 'str'),
+                            var=var, window=window)
+
+
+def int_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, *,
+                      window=None):
+    *parent_path, name = param_path
+    return var_in_paramtree(widget_name, parent_path,
+                            param=Parameter.create(name=name, type='int', decimals=7, value=value, default=value),
+                            var=var, window=window)
+
+
+def float_in_paramtree(widget_name: str, param_path: Sequence[str], step=None, value=None, var: Wrapped = None, *,
+                      window=None):
+    *parent_path, name = param_path
+    return var_in_paramtree(widget_name, parent_path,
+                            param=Parameter.create(name=name, type='float', step=step, value=value, default=value),
+                            var=var, window=window)
