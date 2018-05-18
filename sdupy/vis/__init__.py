@@ -100,11 +100,18 @@ def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, 
         set_image_args.setdefault('autoRange', False)
         set_image_args.setdefault('autoLevels', False)
         set_image_args.setdefault('autoHistogramRange', True)
-        set_image_args.setdefault('axes', dict(y=0, x=1))
-        axes = set_image_args['axes']
-        if len(image.shape) == 3 and not ('t' in axes or 'c' in axes):
-            #FIXME hack, what about rgb images?
-            image = image[:, :, 0]
+        if 'axes' not in set_image_args:
+            if image.ndim == 4:
+                set_image_args['axes'] = dict(t=0, y=1, x=2, c=3)
+            elif image.ndim == 3:
+                set_image_args['axes'] = dict(y=0, x=1, c=2)
+            elif image.ndim == 2:
+                set_image_args['axes'] = dict(y=0, x=1)
+        # set_image_args.setdefault('axes', dict(y=0, x=1))
+        # axes = set_image_args['axes']
+        # if len(image.shape) == 3 and not ('t' in axes or 'c' in axes):
+        #     #FIXME hack, what about rgb images?
+        #     image = image[:, :, 0]
         w.setImage(image, **set_image_args)
         if extent is not None:
             xmin, xmax, ymin, ymax = extent
