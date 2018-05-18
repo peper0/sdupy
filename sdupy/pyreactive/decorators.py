@@ -3,11 +3,51 @@ import inspect
 import contextlib
 import functools
 import logging
+from functools import wraps
 from typing import Callable, Iterable, Union, overload
 
 import asyncio_extras
 
 from sdupy.pyreactive.common import CoroutineFunction, is_wrapper
+
+
+class TrueExceptionHolder(Exception):
+    def __init__(self, exc_info):
+        self.exc_info = exc_info
+
+    def exception_to_rethrow(self):
+        exc_type, exc_value, exc_tb = self.exc_info
+        return exc_value.with_traceback(exc_tb.tb_next.tb_next)
+
+
+def hide_nested_calls(f: Callable):
+    """
+    When reporting an exception, hide nested calls from here up to stop_hiding_nested_calls()
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except TrueExceptionHolder as e:
+            # the string below is to make it easier to analyze stack traces
+            "----- IGNORE THIS FRAME -----"; raise e.exception_to_rethrow() from None
+
+    return wrapper
+
+
+def stop_hiding_nested_calls(f: Callable):
+    """
+    When reporting an exception, hide nested calls from here up to stop_hiding_nested_calls()
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except:
+            import sys
+            raise TrueExceptionHolder(sys.exc_info())
+
+    return wrapper
 
 
 class Reactive:
@@ -16,6 +56,7 @@ class Reactive:
         self.other_deps = other_deps
         self.pass_args = set(pass_args)
 
+    @hide_nested_calls
     def __call__(self, func):
         """
         Decorate the function.
@@ -28,7 +69,7 @@ class Reactive:
                 if args_need_reaction(res.args, res.kwargs):
                     return res._update(res)
                 else:
-                    return decorated.callable(*args, **kwargs)
+                    return decorated.really_call(args, kwargs)
         elif hasattr(func, '__call__'):
             def factory(decorated, args, kwargs):
                 # import here to avoid circular dependency (SyncReactiveProxy does Reactive.__call__ for it's members)
@@ -37,7 +78,7 @@ class Reactive:
                 if args_need_reaction(res.args, res.kwargs):
                     return res._update(res)
                 else:
-                    return decorated.callable(*args, **kwargs)
+                    return decorated.really_call(args, kwargs)
         else:
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(func)))
         return DecoratedFunction(self, factory, func)
@@ -55,6 +96,11 @@ class DecoratedFunction:
         self.args_names = list(self.signature.parameters) if self.signature else None
         functools.update_wrapper(self, func)
 
+    @stop_hiding_nested_calls
+    def really_call(self, args, kwargs):
+        return self.callable(*args, **kwargs)
+
+    @hide_nested_calls
     def __call__(self, *args, **kwargs):
         """
         Bind arguments, call function once and schedule it to be called on any arguments change.
@@ -113,6 +159,7 @@ def reactive_finalizable(pass_args: Iterable[str] = None,
 
 
 class ReactiveCm(Reactive):
+    @hide_nested_calls
     def __call__(self, func):
         """
         Decorate the function.

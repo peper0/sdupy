@@ -8,6 +8,7 @@ from inspect import iscoroutinefunction
 from itertools import chain
 from typing import Any, Dict, List, Set, Tuple
 
+from sdupy.pyreactive.decorators import TrueExceptionHolder, hide_nested_calls
 from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
@@ -368,6 +369,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def __getattr__(self, item):
         return getattr(self, item)
 
+    @hide_nested_calls
     def _update_if_dirty(self):
         if self._dirty:
             # FIXME: doesn't work for async updates
@@ -383,6 +385,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         self._dirty = True
         return True
 
+    @hide_nested_calls
     async def _update_async(self):
         assert iscoroutinefunction(self._update)
         await self._update()
@@ -411,7 +414,7 @@ class ReactiveProxy(LazySwitchableProxy):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
         with ScopedName(name=decorated.callable.__name__):
             super().__init__(async=iscoroutinefunction(self._update))
-        self.decorated = decorated
+        self.decorated = decorated  # type: DecoratedFunction
 
         # use dep_only_args
         for name in decorated.decorator.dep_only_args:
@@ -430,7 +433,7 @@ class ReactiveProxy(LazySwitchableProxy):
         for dep in decorated.decorator.other_deps:
             maybe_observe(dep, self.__notifier__)
 
-        self.args_helper = ArgsHelper(args, kwargs, decorated.signature, decorated.callable)
+        self.args_helper = ArgsHelper(args, kwargs, decorated.signature, decorated.really_call)
         self.args = self.args_helper.args
         self.kwargs = self.args_helper.kwargs
 
@@ -441,9 +444,10 @@ class ReactiveProxy(LazySwitchableProxy):
         try:
             yield
         except Exception as e:
-            self._exception = e
+            true_e = e if not isinstance(e, TrueExceptionHolder) else e.exc_info[1]
+            self._exception = true_e
             if reraise:
-                if not isinstance(e, ForwardedError):
+                if not isinstance(true_e, ForwardedError):
                     # ForwardedError is not re-raised by definition
                     raise e
 
@@ -454,7 +458,7 @@ class ReactiveProxy(LazySwitchableProxy):
         # - a generator to be run once and finalized before the next call
         # - an async generator
         args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args)
-        return self.decorated.callable(*args, **kwargs)
+        return self.decorated.really_call(args, kwargs)
 
     @abstractmethod
     def _update(self, retval=None):
