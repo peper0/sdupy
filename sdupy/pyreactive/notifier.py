@@ -60,6 +60,10 @@ class ScopedName:
     names = []
 
     def __init__(self, name, final=False):
+        """
+        :param name:
+        :param final: Don't chain with ScopedName()s already on the stack
+        """
         self.name = name
         self.final = final
 
@@ -88,6 +92,7 @@ class Notifier:
         self.notify_func = notify_func
         self.calls = 0
         self.stats = dict()
+        self.frame = None
         all_notifiers.add(self)
         #  lowest called first; should be greater than all observed
 

@@ -71,7 +71,10 @@ def add_reactive_forwarders(cl: Any, functions: Iterable[Tuple[str, Callable]]):
             def reactive_f(self_unwrapped, *args):
                 return func(self_unwrapped, *args)
 
-            with ScopedName(name=name, final=True):
+            prefix = ''
+            if hasattr(self, '__notifier__'):
+                preifx = self.__notifier__.name + '.'
+            with ScopedName(name=preifx+name, final=True):
                 return reactive_f(self, *args)
 
         setattr(cl, name, wrapped)

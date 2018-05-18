@@ -303,6 +303,16 @@ class SwitchableProxy(Wrapped, ConstForwarders):
         return getattr(self, item)
 
 
+updates_stack = []
+
+
+def obtain_call_line():
+    return None
+    #FIXME: finish this
+    import traceback
+    return traceback.extract_stack()
+
+
 class LazySwitchableProxy(Wrapped, ConstForwarders):
     """
     A proxy to any observable object (possibly another proxy or some Wrapper like Var or Const). It tries to behave
@@ -324,6 +334,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
             self._notifier = Notifier(self._args_changed)
             self._dirty = True
         self._exception = None
+        self._notifier.line = obtain_call_line()
 
     @property
     def __notifier__(self):
@@ -369,15 +380,20 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def __getattr__(self, item):
         return getattr(self, item)
 
-    @hide_nested_calls
     def _update_if_dirty(self):
         if self._dirty:
             # FIXME: doesn't work for async updates
             logger.debug('updating {}'.format(self._notifier.name))
+            updates_stack.append(self._notifier.line)
             try:
-                self._update()
+                hide_nested_calls(self._update)()
             except Exception as e:
+                #import traceback
+                #print(traceback.print_stack())
                 logging.exception('error when updating {}'.format(self._notifier.name))
+                #logging.exception('error when updating {}'.format(
+                #    '\n======\n'.join(['\n'.join(map(str, l)) for l in updates_stack])))
+            updates_stack.pop()
             self._dirty = False
 
     def _args_changed(self):
