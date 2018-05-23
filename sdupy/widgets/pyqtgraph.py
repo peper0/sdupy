@@ -4,8 +4,8 @@ from math import isfinite
 
 import pyqtgraph as pg
 from PyQt5.QtCore import QPointF
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout
+from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout, QLabel
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
@@ -75,6 +75,15 @@ class PgImage(pg.ImageView):
         self.show_cursor_pos()
         self.visibilityChanged = parent.visibilityChanged  # FIXME we assume too much about our parent
 
+        self.pos_label = QLabel(self)
+        font = QFont()
+        font.setWeight(75)
+        font.setBold(True)
+        self.pos_label.setFont(font)
+        self.pos_label.setObjectName("pos_label")
+        self.pos_label.setText('')
+        self.ui.gridLayout.addWidget(self.pos_label, 2, 0, 2, 1)
+
     def show_cursor_pos(self, show=True):
         if self._show_cursor_proxy:
             self._show_cursor_proxy.disconnect()
@@ -87,7 +96,7 @@ class PgImage(pg.ImageView):
             @ignore_errors
             def mouseMoved(evt):
                 view_point = self.view.vb.mapSceneToView(evt[0])
-                text = "x,y = ({:0.2f}, {:0.2f})".format(view_point.x(), view_point.y())
+                text = "x,y = ({:6.1f}, {:6.1f})".format(view_point.x(), view_point.y())
                 if self.image is not None and 'x' in self.axes and 'y' in self.axes:
                     item_point = self.imageItem.mapFromScene(evt[0])
                     ix = int(item_point.x())
@@ -99,15 +108,16 @@ class PgImage(pg.ImageView):
                         if self.axes.get('t') is not None:
                             index[self.axes['t']] = self.currentIndex
                         val = self.image[tuple(index)]
-                        text += "\ndata[{}] = {}".format(index_to_str(index), val)
-                self.cursor_pos_label.setText(text)
-                if all(isfinite(c) for c in [view_point.x(), view_point.y()]):
-                    self.cursor_pos_label.setPos(view_point)
-                else:
-                    self.cursor_pos_label.setPos(QPointF(0, 0))
+                        text += "    data[{}] = {}".format(index_to_str(index), val)
+                #self.cursor_pos_label.setText(text)
+                self.pos_label.setText(text)
+                # if all(isfinite(c) for c in [view_point.x(), view_point.y()]):
+                #     self.cursor_pos_label.setPos(view_point)
+                # else:
+                #     self.cursor_pos_label.setPos(QPointF(0, 0))
 
-            self.cursor_pos_label = pg.TextItem(anchor=(0, 1))
-            self.addItem(self.cursor_pos_label)
+            #self.cursor_pos_label = pg.TextItem(anchor=(0, 1))
+            #self.addItem(self.cursor_pos_label)
 
         self._show_cursor_proxy = pg.SignalProxy(self.scene.sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
