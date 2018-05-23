@@ -1,7 +1,7 @@
 import operator
 from abc import abstractmethod
 from functools import wraps
-from math import ceil, floor, trunc
+from math import ceil, floor
 
 from sdupy.pyreactive.wrapping import add_assignop_forwarders, add_notifying_forwarders, add_reactive_forwarders
 from .decorators import reactive
@@ -131,6 +131,11 @@ class ConstForwarders(ForwarderBase):
 
     def __format__(self, format_spec):
         return format(self._target().__inner__, format_spec)
+
+    @reactive
+    def __call__(self, *args, **kwargs):
+        # This one is not necessary const. But it may be. We don't know.
+        return self.__call__(*args, **kwargs)
 
 
 class MutatingForwarders(ForwarderBase):

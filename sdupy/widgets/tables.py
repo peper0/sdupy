@@ -20,7 +20,7 @@ from ..pyreactive import Wrapped, reactive, unwrap
 
 @register_widget("generic table")
 class Table(QWidget):
-    def __init__(self, parent, name):
+    def __init__(self, parent):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
@@ -43,7 +43,7 @@ class Table(QWidget):
 @register_widget("variables table")
 class VarsTable(Table):
     def __init__(self, parent, name):
-        super().__init__(parent, name)
+        super().__init__(parent)
         self.model = VarsModel(self)
         self._table_view.setModel(self.model)
 
@@ -82,11 +82,16 @@ class VarsModel(QAbstractTableModel):
                         try:
                             return str(unwrap(item.var))
                         except Exception as e:
-                            return "{}\n{}".format(e.__class__, e)
+                            lines = []
+                            while e:
+                                lines.append('{{{}}} {}'.format(e.__class__.__name__, e))
+                                e = e.__cause__
+                            return '\n'.join(lines)
                 if role == Qt.BackgroundColorRole:
-                    exception = unwrap_exception(item.var)
-                    if exception is not None:
-                        return QColor('red')
+                    if index.column() == 1:
+                        exception = unwrap_exception(item.var)
+                        if exception is not None:
+                            return QColor('red')
 
     @ignore_errors
     def flags(self, index: QModelIndex):

@@ -1,3 +1,4 @@
+from contextlib import suppress
 from math import ceil, log10
 
 from PyQt5 import QtCore
@@ -60,7 +61,11 @@ class Slider(QWidget):
     @reactive
     def _set_all_to(self, value):
         #print("set all to ", value)
-        if self._uses_integer():
+        if self._min > self._max:
+            set_if_inequal(self._var, None)
+            return
+
+        if self._uses_integer() and value is not None:
             value = int(round(value))
         set_if_inequal(self._slider_val, value * self._slider_mult)
         set_if_inequal(self._spin_val, value)
@@ -97,13 +102,23 @@ class Slider(QWidget):
                 volatile(self._set_all_to(self._slider_val / self._slider_mult))
             ]
 
-
         val = unwrap_def(self._var, None)
-        if val is not None:
-            if val > max:
-                self._var.set(max)
-            elif val < min:
-                self._var.set(min)
+
+        self.fix_value(max, min, val)
+
+    def fix_value(self, max, min, val):
+        if min > max:
+            new_val = None
+        elif val is None:
+            new_val = min
+        elif val > max:
+            new_val = max
+        elif val < min:
+            new_val = min
+        else:
+            return
+
+        set_if_inequal(self._var, new_val)
 
     def dump_state(self):
         return dict(
@@ -115,4 +130,8 @@ class Slider(QWidget):
 
     def load_state(self, state: dict):
         self.set_params(state['min'], state['max'], state['step'])
-        self._var.set(state['value'])
+        value = state['value']
+        if self._uses_integer() and value is not None:
+            value = int(round(value))
+
+        self._var.set(value)

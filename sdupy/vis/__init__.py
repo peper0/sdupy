@@ -46,7 +46,7 @@ def mpl_axes(name: str, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Ax
 axes = mpl_axes
 
 
-def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **kwargs):
+def image_mpl(widget_name: str, image: Wrapped[np.ndarray], is_bgr=True, window=None, **kwargs):
     """
     :param name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
@@ -57,7 +57,6 @@ def image_mpl(widget_name: str, image: np.ndarray, is_bgr=True, window=None, **k
     ax = mpl_axes(name=widget_name, window=window)
     w = widget(name=widget_name, window=window)
     image_name = kwargs.get('label')
-    print('================shape', image.shape)
     i = ax.imshow(image_to_mpl(image, is_bgr), **kwargs)
     global_refs[(ax.__inner__, image_name)] = trigger_if_visible(i, ax.__inner__.get_figure().canvas.parentWidget())
     return i
@@ -296,6 +295,13 @@ def combo_in_paramtree(widget_name: str, param_path: Sequence[str], choices, var
     return res
 
 
+def checkbox_in_paramtree(widget_name: str, param_path: Sequence[str], var: Wrapped = None, *, window=None):
+    *parent_path, name = param_path
+    param = Parameter.create(name=name, type='bool')
+    res = var_in_paramtree(widget_name, parent_path, param=param, var=var, window=window)
+    return res
+
+
 def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=False, var: Wrapped = None, *,
                       window=None):
     *parent_path, name = param_path
@@ -312,9 +318,10 @@ def int_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, va
                             var=var, window=window)
 
 
-def float_in_paramtree(widget_name: str, param_path: Sequence[str], step=None, value=None, var: Wrapped = None, *,
-                      window=None):
+def float_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, window=None,
+                       **kwargs):
     *parent_path, name = param_path
     return var_in_paramtree(widget_name, parent_path,
-                            param=Parameter.create(name=name, type='float', step=step, value=value, default=value),
+                            param=Parameter.create(name=name, type='float', value=value, default=value,
+                                                   **kwargs),
                             var=var, window=window)

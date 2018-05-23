@@ -11,13 +11,9 @@ import asyncio_extras
 from sdupy.pyreactive.common import CoroutineFunction, is_wrapper
 
 
-class TrueExceptionHolder(Exception):
-    def __init__(self, exc_info):
-        self.exc_info = exc_info
-
+class HideStackHelper(Exception):
     def exception_to_rethrow(self):
-        exc_type, exc_value, exc_tb = self.exc_info
-        return exc_value.with_traceback(exc_tb.tb_next.tb_next)
+        return self.__cause__.with_traceback(self.__cause__.__traceback__.tb_next.tb_next)
 
 
 def hide_nested_calls(f: Callable):
@@ -28,7 +24,7 @@ def hide_nested_calls(f: Callable):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except TrueExceptionHolder as e:
+        except HideStackHelper as e:
             # the string below is to make it easier to analyze stack traces
             "----- IGNORE THIS FRAME -----"; raise e.exception_to_rethrow() from None
 
@@ -43,9 +39,8 @@ def stop_hiding_nested_calls(f: Callable):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except:
-            import sys
-            raise TrueExceptionHolder(sys.exc_info())
+        except Exception as e:
+            raise HideStackHelper() from e
 
     return wrapper
 

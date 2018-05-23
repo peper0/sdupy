@@ -8,7 +8,7 @@ from inspect import iscoroutinefunction
 from itertools import chain
 from typing import Any, Dict, List, Set, Tuple
 
-from sdupy.pyreactive.decorators import TrueExceptionHolder, hide_nested_calls
+from sdupy.pyreactive.decorators import HideStackHelper, hide_nested_calls, stop_hiding_nested_calls
 from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
@@ -78,13 +78,22 @@ class NotInitializedError(Exception):
         super().__init__('not initialized')
 
 
-class ForwardedError(Exception):
+class SilentError(Exception):
     """
     An exception that is silently propagated and not raised unless explicit unwrapping is done on the variable.
+    The error that is silenced should be the cause of this error.
     """
-    def __init__(self, arg_name):
-        super().__init__("propagating exception from arg '{}'".format(arg_name))
+    pass
+
+
+class ArgEvalError(Exception):
+    """
+    A reactive argument is in error state. The argument error should be the cause of this error.
+    """
+    def __init__(self, arg_name, function_name):
+        super().__init__("error in argument '{}' of '{}'".format(arg_name, function_name))
         self.arg_name = arg_name
+        self.function_name = function_name
 
 
 class Var(Wrapper, ConstForwarders, MutatingForwarders):
@@ -154,6 +163,7 @@ def as_observable(v):
 
 
 class ArgsHelper:
+    @stop_hiding_nested_calls
     def __init__(self, args, kwargs, signature, callable):
         if signature:
             # support default parameters
@@ -183,7 +193,7 @@ class ArgsHelper:
         return ((index, name, arg) for index, (name, arg) in zip(self.kwargs_indices, self.kwargs.items()))
 
 
-def rewrap_args(args_helper: ArgsHelper, pass_args) -> Tuple[List[Any], Dict[str, Any]]:
+def rewrap_args(args_helper: ArgsHelper, pass_args, func_name) -> Tuple[List[Any], Dict[str, Any]]:
     def rewrap(index, name, arg):
         try:
             if index in pass_args or name in pass_args:
@@ -191,7 +201,9 @@ def rewrap_args(args_helper: ArgsHelper, pass_args) -> Tuple[List[Any], Dict[str
             else:
                 return unwrapped(arg)
         except Exception as exception:
-            raise ForwardedError(name or str(index)) from exception
+            e = ArgEvalError(name or str(index), func_name)
+            e.__cause__ = exception
+            raise SilentError() from e
 
     return ([rewrap(index, name, arg) for index, name, arg in args_helper.iterate_args()],
             {name: rewrap(index, name, arg) for index, name, arg in args_helper.iterate_kwargs()})
@@ -344,7 +356,10 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def __inner__(self):
         self._update_if_dirty()
         if self._exception is not None:
-            raise Exception() from self._exception
+            raise self._exception
+#            if isinstance(self._exception, SilentError):
+#                raise self._exception
+            #raise Exception() from self._exception
         if self._ref is not None and hasattr(self._ref, '__inner__'):
             return self._ref.__inner__
 
@@ -456,16 +471,18 @@ class ReactiveProxy(LazySwitchableProxy):
         observe_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__)
 
     @contextmanager
-    def _handle_exception(self, reraise):
+    def _handle_exception(self, reraise=True):
         try:
             yield
         except Exception as e:
-            true_e = e if not isinstance(e, TrueExceptionHolder) else e.exc_info[1]
-            self._exception = true_e
+            if isinstance(e, HideStackHelper):
+                e = e.__cause__
+            if isinstance(e, SilentError):
+                e = e.__cause__
+                reraise = False  # SilentError is not re-raised by definition
+            self._exception = e
             if reraise:
-                if not isinstance(true_e, ForwardedError):
-                    # ForwardedError is not re-raised by definition
-                    raise e
+                raise HideStackHelper() from e
 
     def _call(self):
         # returns one of:
@@ -473,7 +490,7 @@ class ReactiveProxy(LazySwitchableProxy):
         # - a coroutine (to be awaited),
         # - a generator to be run once and finalized before the next call
         # - an async generator
-        args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args)
+        args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
         return self.decorated.really_call(args, kwargs)
 
     @abstractmethod

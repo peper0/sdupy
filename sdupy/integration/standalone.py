@@ -6,7 +6,9 @@ from PyQt5.QtWidgets import QApplication
 from .common import init_quamash
 
 if QApplication.instance() is None:
-    app = QApplication(sys.argv)
+    app = QApplication(['sdupy'])
+
+init_quamash()
 
 
 def run_mainloop():
