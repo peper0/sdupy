@@ -42,6 +42,7 @@ def image_to_mpl(image: np.ndarray, is_bgr=True):
 def pg_hold_items(pg_parent, *items, zvalue=None):
     for item in items:
         if zvalue is not None:
+            assert item is not None
             item.setZValue(zvalue)
         pg_parent.addItem(item)
     yield
@@ -51,7 +52,6 @@ def pg_hold_items(pg_parent, *items, zvalue=None):
 
 @reactive
 def image_to_pg(image: np.ndarray, is_bgr=True, do_flip=True):
-    #FIXME: use CONFIG_OPTIONS instead of transposition
     image = image_to_mpl(image, is_bgr)
     if do_flip:
         image = np.flip(image, axis=0)

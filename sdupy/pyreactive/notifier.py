@@ -23,6 +23,7 @@ def is_notify_func(notify_func):
 class DummyNotifier:
     def __init__(self, priority):
         self.priority = priority
+        self.name = 'dummy'
 
     def add_observer(self, notifier: 'Notifier'):
         pass

@@ -467,6 +467,7 @@ class ReactiveProxy(LazySwitchableProxy):
         self.args_helper = ArgsHelper(args, kwargs, decorated.signature, decorated.really_call)
         self.args = self.args_helper.args
         self.kwargs = self.args_helper.kwargs
+        self._update_in_progress = False
 
         observe_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__)
 
@@ -490,8 +491,14 @@ class ReactiveProxy(LazySwitchableProxy):
         # - a coroutine (to be awaited),
         # - a generator to be run once and finalized before the next call
         # - an async generator
-        args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
-        return self.decorated.really_call(args, kwargs)
+        assert self._update_in_progress == False, 'circular dependency containing {}'.format(self.__notifier__.name)
+        try:
+            self._update_in_progress = True
+            args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
+            res = self.decorated.really_call(args, kwargs)
+        finally:
+            self._update_in_progress = False
+        return res
 
     @abstractmethod
     def _update(self, retval=None):
