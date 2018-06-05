@@ -34,8 +34,8 @@ class MainWindow(QMainWindow):
         self.widgets = {}  # type: Dict[str, WidgetInstance]
 
         self.file_menu = QMenu('&File', self)
-        a = self.file_menu.addAction('&Save layout', ignore_errors(self.save_state_action), Qt.CTRL + Qt.Key_S)
-        a.setEnabled(bool(self.persistence_id))
+        self.save_layout_action = self.file_menu.addAction('&Save layout', ignore_errors(self.save_state_to_file), Qt.CTRL + Qt.Key_S)
+        self.save_layout_action.setEnabled(bool(self.persistence_id))
         self.menuBar().addMenu(self.file_menu)
 
         self.add_menu = QMenu('&Add widget', self)
@@ -129,11 +129,11 @@ class MainWindow(QMainWindow):
         return wi.widget, wi.dock_widget
 
     def closeEvent(self, a0: QCloseEvent):
-        self.save_state_action()
+        self.save_state_to_file()
         if self.close_callback:
             self.close_callback()
 
-    def save_state_action(self):
+    def save_state_to_file(self):
         if self.persistence_id:
             state_as_json = json.dumps(
                 self.dump_state())  # we do it before overwritting a file since there may be error
