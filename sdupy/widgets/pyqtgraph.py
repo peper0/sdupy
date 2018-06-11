@@ -11,6 +11,7 @@ from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
 from sdupy.progress import Progress
 from sdupy.utils import ignore_errors
+from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
 from . import register_widget
 
 
@@ -171,14 +172,15 @@ class PgScatter(pg.ScatterPlotWidget):
             @ignore_errors
             def mouseMoved(evt):
                 view_point = plot_item.vb.mapSceneToView(evt[0])
-                points = self.scatterPlot.scatter.pointsAt(view_point)
-                text = ''
-                for p in points:
-                    for k, v in zip(self.fields.keys(), p.data()):
-                        text += '{}: {}\n'.format(k, v)
-                    text += '\n'
-                self.info_label.setText(text)
-                print(text)
+                if self.scatterPlot is not None:
+                    points = self.scatterPlot.scatter.pointsAt(view_point)
+                    text = ''
+                    for p in points:
+                        for k, v in zip(self.fields.keys(), p.data()):
+                            text += '{}: {}\n'.format(k, v)
+                        text += '\n'
+                    self.info_label.setText(text)
+                    print(text)
 
             self._show_cursor_proxy = pg.SignalProxy(plot_item.scene().sigMouseMoved, rateLimit=15, slot=mouseMoved)
 
@@ -379,8 +381,10 @@ class PgParamTree(QWidget):
         self.layout.addWidget(self.param_tree)
 
     def dump_state(self):
-        return dict(
-        )
+        return dict(params=paramtree_dump_params(self.param_tree))
 
     def load_state(self, state: dict):
+        if 'params' in state:
+            paramtree_load_params(self.param_tree, state['params'])
+
         pass

@@ -14,7 +14,7 @@ from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg
-from sdupy.widgets.hepers import trigger_if_visible
+from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs
 from sdupy.progress import Progress
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
@@ -204,11 +204,6 @@ def array_table(widget_name: str, var: Wrapped=None, *, format:str=None, window=
     return w.var
 
 
-def paramtree_get_root_parameters(pt: ParameterTree) -> Sequence[Parameter]:
-    root = pt.invisibleRootItem()
-    return [root.child(i).param for i in range(root.childCount())]
-
-
 def _paramtree_find_child(parent, child_name):
     if isinstance(parent, ParameterTree):
         root = parent.invisibleRootItem()  # type: QTreeWidgetItem
@@ -259,6 +254,10 @@ class PgParamVar(QtSignaledVar):
     def __init__(self, param: Parameter):
         super().__init__(param.sigValueChanged)
         self.param = param
+        self.param.sigValueChanged.connect(self.test)
+
+    def test(self):
+        print("{}, changed".format(self))
 
     def set(self, value):
         self.param.setValue(value)
@@ -311,10 +310,10 @@ def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=Fal
 
 
 def int_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, *,
-                      window=None):
+                      window=None, **kwargs):
     *parent_path, name = param_path
     return var_in_paramtree(widget_name, parent_path,
-                            param=Parameter.create(name=name, type='int', decimals=7, value=value, default=value),
+                            param=Parameter.create(name=name, type='int', decimals=7, value=value, default=value, **kwargs),
                             var=var, window=window)
 
 

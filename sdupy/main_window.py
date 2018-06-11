@@ -6,7 +6,6 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDockWidget, QMainWindow, QMenu, QWidget
 
-from sdupy.pyreactive.notifier import ScopedName
 from sdupy.utils import ignore_errors
 from . import widgets
 from .widgets.common.register import FactoryDesc
@@ -53,11 +52,19 @@ class MainWindow(QMainWindow):
             self.add_factory_to_gui(factory_desc)
 
         if self.persistence_id:
-            try:
-                with open("{}.state.json".format(persistence_id)) as f:
-                    self.load_state(json.load(f))
-            except Exception:
-                logging.exception("exception during reading state file; ignoring")
+            self.load_state_std()
+
+    def load_state_std(self):
+        """
+        State is loaded at construction time but some controls cannot restore themselves correctly before in-app
+        initialization (e.g. parameter trees). It's good therefore to call this function after initializing the
+        application.
+        """
+        try:
+            with open("{}.state.json".format(self.persistence_id)) as f:
+                self.load_state(json.load(f))
+        except Exception:
+            logging.exception("exception during reading state file; ignoring")
 
     def add_factory_to_gui(self, factory_desc: FactoryDesc):
         def add_widget():
@@ -165,8 +172,12 @@ class MainWindow(QMainWindow):
             for widget_name, factory_name, title, widget_state in state['widgets']:
                 try:
                     logging.debug("restoring state of '{}'".format(title))
-                    widget = self.add_widget_from_factory(widgets.registered_factories[factory_name], widget_name,
-                                                          title)
+
+                    if widget_name in self.widgets:
+                        widget = self.widgets[widget_name].widget
+                    else:
+                        widget = self.add_widget_from_factory(widgets.registered_factories[factory_name], widget_name,
+                                                              title)
                     if widget_state:
                         widget.load_state(widget_state)
                 except Exception:

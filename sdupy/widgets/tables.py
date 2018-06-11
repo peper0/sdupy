@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QLineEdit, QTableView, QVBoxLayout, QWidget
 from sdupy.pyreactive import unwrap_exception
 from sdupy.pyreactive.notifier import Notifier, ScopedName
 from sdupy.utils import ignore_errors
-from sdupy.widgets.hepers import trigger_if_visible
+from sdupy.widgets.helpers import trigger_if_visible
 from .common.register import register_factory, register_widget
 from ..pyreactive import Wrapped, reactive, unwrap
 
