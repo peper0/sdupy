@@ -3,6 +3,7 @@ import inspect
 import contextlib
 import functools
 import logging
+from contextlib import suppress
 from functools import wraps
 from typing import Callable, Iterable, Union, overload
 

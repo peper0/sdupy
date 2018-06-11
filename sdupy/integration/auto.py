@@ -24,6 +24,6 @@ else:
 
 
     def run_mainloop():
-        print("You shouldn't do it! Use 'install_mainloop()'")
+        print("Ignoring 'run_mainloop' - mainloop is integrated with current shell")
 
 unused = install  # just ensure IDE that it is used
