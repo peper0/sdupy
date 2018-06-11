@@ -1,10 +1,9 @@
-from numbers import Number
+from numbers import Number, Integral
 from typing import Mapping, Sequence
 from builtins import isinstance
 
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from numpy.core import numeric
 from pyqtgraph import ImageItem, GraphItem, PlotItem, ScatterPlotWidget, OrderedDict
 
 from sdupy.pyreactive import reactive, reactive_finalizable
@@ -146,7 +145,7 @@ def set_scatter_data_pg(widget: ScatterPlotWidget, data):
                 data_ar[i][k] = to_acceptable_value(v)
 
         def field_flags(name, ftype, values):
-            if not issubclass(ftype, Number):
+            if not issubclass(ftype, Number) or (isinstance(ftype, Integral) and len(values) < 10):
                 return dict(mode='enum', values=list(values))
             return dict()
 
