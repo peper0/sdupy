@@ -32,3 +32,7 @@ def install():
     get_ipython().run_line_magic('gui', 'sdupy')
     init_quamash()  # run_line_magic doesn't call run_loop_in_jupyter immediately and we don't want to loose any schedule to the loop
     test_asyncio()
+
+
+def run_mainloop():
+    print("Ignoring 'run_mainloop' - mainloop is integrated with current shell")

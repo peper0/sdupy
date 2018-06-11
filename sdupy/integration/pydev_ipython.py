@@ -25,7 +25,7 @@ def asyncio_inputhook():
     loop = asyncio.get_event_loop()
     assert loop is not None
     assert isinstance(loop, QEventLoop), "loop is of type {}".format(loop.__class__.__qualname__)
-    # run_until_complete(sleep) is bad since it calls QApplicatoin.exit() after timeout
+    # run_until_complete(sleep) is bad since it calls QApplication.exit() after timeout
     loop.run_for(0.05)
 
 
@@ -37,3 +37,7 @@ def install():
     init_quamash()
     set_inputhook(asyncio_inputhook)
     test_asyncio()
+
+
+def run_mainloop():
+    print("Ignoring 'run_mainloop' - mainloop is integrated with current shell")

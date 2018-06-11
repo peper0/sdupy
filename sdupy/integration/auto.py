@@ -1,29 +1,40 @@
-ipython = None
+from . import pydev_ipython  # workaround for importing it here fix the problem with matplotlib?
 
-try:
-    ipython = get_ipython()
-except Exception:
-    pass
+def get_module():
+    global install, run_mainloop
+    ipython = None
 
-if ipython is None:
-    print("no ipython/jupyter environment detected, call 'run_mainloop()' after initialization of the application")
-    from .standalone import run_mainloop
-
-    unused = run_mainloop
+    try:
+        ipython = get_ipython()
+    except Exception:
+        pass
 
 
-    def install():
-        print("no ipython/jupyter environment detected, call 'run_mainloop()' after initialization of the application")
-else:
-    if ipython.__class__.__name__ == 'PyDevTerminalInteractiveShell':
-        print("pydev_ipython detected")
-        from .pydev_ipython import install
-    elif ipython.__class__.__name__ == 'ZMQInteractiveShell':
-        print("jupyter python kernel detected")
-        from .jupyter import install
+    #print("ipython", ipython)
+    if ipython is not None:
+        if ipython.__class__.__name__ == 'PyDevTerminalInteractiveShell':
+            print("pydev_ipython detected")
+            #from . import pydev_ipython
+            return pydev_ipython
+        elif ipython.__class__.__name__ == 'ZMQInteractiveShell':
+            print("jupyter python kernel detected")
+            from . import jupyter
+            return jupyter
+        else:
+            print("unknown IPython class: {}".format(ipython.__class__.__name__))
+
+    print("no supported ipython/jupyter environment detected")
+    from . import standalone
+    return standalone
 
 
-    def run_mainloop():
-        print("Ignoring 'run_mainloop' - mainloop is integrated with current shell")
+def install():
+    get_module().install()
 
-unused = install  # just ensure IDE that it is used
+
+def run_mainloop():
+    get_module().run_mainloop()
+
+
+__all__ = ['install', 'run_mainloop']
+
