@@ -39,7 +39,6 @@ class Wrapper(Wrapped):
         return self
 
     def __str__(self):
-        # print()
         try:
             return '{}({})'.format(self.__class__.__name__, repr(self.__inner__))
         except Exception as e:
@@ -354,14 +353,19 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
 
     @property
     def __inner__(self):
-        self._update_if_dirty()
-        if self._exception is not None:
-            raise self._exception
-#            if isinstance(self._exception, SilentError):
-#                raise self._exception
-            #raise Exception() from self._exception
-        if self._ref is not None and hasattr(self._ref, '__inner__'):
-            return self._ref.__inner__
+        try:
+            self._update_if_dirty()
+
+            if self._exception is not None:
+                raise self._exception
+    #            if isinstance(self._exception, SilentError):
+    #                raise self._exception
+                #raise Exception() from self._exception
+            if self._ref is not None and hasattr(self._ref, '__inner__'):
+                return self._ref.__inner__
+        except AttributeError as e:
+            # AttributeError could be interpreted as 'no such method' on at some point of the call stack
+            raise Exception("Disabling AttributeError") from e
 
     def _target(self):
         self._update_if_dirty()
@@ -475,6 +479,7 @@ class ReactiveProxy(LazySwitchableProxy):
     def _handle_exception(self, reraise=True):
         try:
             yield
+
         except Exception as e:
             if isinstance(e, HideStackHelper):
                 e = e.__cause__
@@ -496,9 +501,11 @@ class ReactiveProxy(LazySwitchableProxy):
             self._update_in_progress = True
             args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
             res = self.decorated.really_call(args, kwargs)
-        finally:
             self._update_in_progress = False
-        return res
+            return res
+        except Exception:
+            self._update_in_progress = False
+            raise
 
     @abstractmethod
     def _update(self, retval=None):
