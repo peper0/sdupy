@@ -251,7 +251,7 @@ class PathParameter(Parameter):
 
 
 class TaskParameterItem(ParameterItem):
-    def __init__(self, param, depth):
+    def __init__(self, param: Parameter, depth):
         super().__init__(param, depth)
         self.layoutWidget = QWidget()
         self.layout = QHBoxLayout()
@@ -368,6 +368,47 @@ class TaskParameter(Parameter):
                     return
         except:
             logging.exception("error in show_progress")
+
+
+class ActionParameterItem(ParameterItem):
+    def __init__(self, param: Parameter, depth):
+        super().__init__(param, depth)
+
+        self.execute_button = QPushButton()
+        self.execute_button.setFixedHeight(20)
+        self.execute_button.setFixedWidth(48)
+        self.execute_button.clicked.connect(self.buttonClicked)
+        self.execute_button.setText(param.name())
+
+        self.label = QLabel()
+        self.label.setFixedHeight(20)
+
+    @ignore_errors
+    def treeWidgetChanged(self):
+        super().treeWidgetChanged()
+        tree = self.treeWidget()
+        if tree is None:
+            return
+        tree.setItemWidget(self, 0, self.execute_button)
+        tree.setItemWidget(self, 1, self.label)
+
+    def buttonClicked(self):
+        try:
+            res = self.param.func()
+            self.label.setText('result: {}'.format(res))
+        except Exception as e:
+            self.label.setText('error (see tooltip)')
+            self.label.setToolTip('error: ' + str(e))
+
+
+class ActionParameter(Parameter):
+    """Used for displaying a button within the tree."""
+    itemClass = ActionParameterItem
+
+    # TODO: replace with some better control
+    def __init__(self, func=None, **opts):
+        super().__init__(**opts)
+        self.func = func
 
 
 @register_widget('param tree')

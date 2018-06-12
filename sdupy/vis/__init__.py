@@ -18,7 +18,7 @@ from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visi
 from sdupy.vis.globals import global_refs
 from sdupy.progress import Progress
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
-from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter
+from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -282,6 +282,14 @@ def task_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callabl
                       window=None):
     *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)
+    param_in_paramtree(widget_name, parent_path, param, window=window)
+    return param
+
+
+def action_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[], Any] = None, *,
+                        window=None):
+    *parent_path, name = param_path
+    param = ActionParameter(name=name, func=func)
     param_in_paramtree(widget_name, parent_path, param, window=window)
     return param
 
