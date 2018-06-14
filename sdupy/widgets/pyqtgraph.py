@@ -376,7 +376,7 @@ class ActionParameterItem(ParameterItem):
 
         self.execute_button = QPushButton()
         self.execute_button.setFixedHeight(20)
-        self.execute_button.setFixedWidth(48)
+        #self.execute_button.setFixedWidth(48)
         self.execute_button.clicked.connect(self.buttonClicked)
         self.execute_button.setText(param.name())
 
@@ -399,6 +399,7 @@ class ActionParameterItem(ParameterItem):
         except Exception as e:
             self.label.setText('error (see tooltip)')
             self.label.setToolTip('error: ' + str(e))
+            logging.exception('error during executing action {}'.format(self.param.name()))
 
 
 class ActionParameter(Parameter):
