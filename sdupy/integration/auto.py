@@ -1,4 +1,9 @@
-from . import pydev_ipython  # workaround for importing it here fix the problem with matplotlib?
+
+try:
+    from . import pydev_ipython  # workaround for importing it here fix the problem with matplotlib?
+except:
+    pass
+
 
 def get_module():
     global install, run_mainloop
@@ -14,7 +19,7 @@ def get_module():
     if ipython is not None:
         if ipython.__class__.__name__ == 'PyDevTerminalInteractiveShell':
             print("pydev_ipython detected")
-            #from . import pydev_ipython
+            from . import pydev_ipython
             return pydev_ipython
         elif ipython.__class__.__name__ == 'ZMQInteractiveShell':
             print("jupyter python kernel detected")
