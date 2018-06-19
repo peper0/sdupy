@@ -3,3 +3,4 @@ pyqtgraph
 numpy
 matplotlib
 quamash
+asyncio_extras
