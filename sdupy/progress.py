@@ -23,8 +23,10 @@ class Progress:
         await asyncio.sleep(0.001)
 
 
-async def reporting_progress(seq: Sequence, progress: Progress, size=None):
+async def reporting_progress(seq: Sequence, progress: Progress, size=None, status=None):
     size = size if size is not None else len(seq)
+    if status is not None and progress is not None:
+        progress.set_status(status)
     for i, e in enumerate(seq):
         yield e
         if progress is not None:
