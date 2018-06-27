@@ -3,7 +3,8 @@ from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Corout
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget, QMenu, QAction, QMenuBar
 from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
@@ -13,6 +14,7 @@ from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
+from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg
 from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs
@@ -353,3 +355,54 @@ def float_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, 
                             param=Parameter.create(name=name, type='float', value=value, default=value,
                                                    **kwargs),
                             var=var, window=window)
+
+
+def add_action_to_menu(menu: Union[QMenu, QMenuBar], path: Sequence[str], new_action: QAction):
+    actions = {action.text(): action for action in menu.actions()}
+    if path:
+        path_head, *path_rest = path
+        action = actions.get(path_head)
+
+        if action:
+            submenu = action.menu()
+        else:
+            submenu = menu.addMenu(menu.addMenu(path_head)).menu()
+        add_action_to_menu(submenu, path_rest, new_action)
+    else:
+        action = actions.get(new_action.text())
+        if action:
+            menu.removeAction(action)
+        menu.addAction(new_action)
+
+
+def action_in_menu(path: Sequence[str], func: Callable[[], Any] = None,
+                   shortcut: Union[QKeySequence, QKeySequence.StandardKey, str, int] = None,
+                   *, window=None):
+    qwindow = sdupy.window(window)
+    #menu = qwindow.menuBar().findChild(QMenu)  # type: QMenu
+    menu = qwindow.menuBar()
+
+    action = QAction(parent=qwindow)
+
+    *subpath, title = path
+    action.setText(title)
+    if shortcut:
+        action.setShortcut(shortcut)
+
+    def func2():  # if we pass ignore_errors(func) to connect, this function will be given some argument
+        return ignore_errors(func)()
+
+    action.triggered.connect(func2)
+
+    add_action_to_menu(menu, subpath, action)
+
+
+def decor_action_in_menu(path: Sequence[str],
+                         shortcut: Union[QKeySequence, QKeySequence.StandardKey, str, int] = None,
+                         *, window=None):
+    @wraps(action_in_menu)
+    def f(func):
+        action_in_menu(path, func, shortcut, window=window)
+        return func
+
+    return f
