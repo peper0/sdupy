@@ -93,8 +93,7 @@ def make_pg_image_item(image, extent=None, **kwargs):
 def make_graph_item_pg(pos, adj, **kwargs):
     pos = np.asarray(pos)
     assert len(pos.shape) == 2 and pos.shape[1] == 2
-    adj = np.array(adj, dtype=int)
-    assert len(adj.shape) == 2
+    adj = np.array(adj, dtype=int) if len(adj) == 0 else np.zeros((0, 2), dtype=int)
     item = GraphItem(pos=pos, adj=adj, **kwargs)
     item.generatePicture()  # trigger exceptions that may occur here (and would be raised inside "paint" method)
     return item
