@@ -294,6 +294,24 @@ def action_in_paramtree(widget_name: str, param_path: Sequence[str], func: Calla
     return param
 
 
+def decor_task_in_paramtree(widget_name: str, param_path: Sequence[str], *, window=None):
+    @wraps(task_in_paramtree)
+    def f(func):
+        task_in_paramtree(widget_name, param_path, func, window=window)
+        return func
+
+    return f
+
+
+def decor_action_in_paramtree(widget_name: str, param_path: Sequence[str], *, window=None):
+    @wraps(action_in_paramtree)
+    def f(func):
+        action_in_paramtree(widget_name, param_path, func, window=window)
+        return func
+
+    return f
+
+
 def combo_in_paramtree(widget_name: str, param_path: Sequence[str], choices, var: Wrapped = None, *, window=None):
     *parent_path, name = param_path
     param = Parameter.create(name=name, type='list')
