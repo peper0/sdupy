@@ -1,3 +1,4 @@
+from functools import wraps
 from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Coroutine
 
 import matplotlib.pyplot as plt
@@ -25,6 +26,7 @@ from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for,
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
+from .utils import *
 
 
 def widget_and_dock(name: str, factory=None, window: WindowSpec = None):
