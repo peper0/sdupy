@@ -329,11 +329,12 @@ def checkbox_in_paramtree(widget_name: str, param_path: Sequence[str], var: Wrap
     return res
 
 
-def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=False, var: Wrapped = None, *,
-                      window=None):
+def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=False, value=None, var: Wrapped = None, *,
+                      window=None, **kwargs):
     *parent_path, name = param_path
     return var_in_paramtree(widget_name, parent_path,
-                            param=Parameter.create(name=name, type='text' if multiline else 'str'),
+                            param=Parameter.create(name=name, type='text' if multiline else 'str',
+                                                   value=value, default=value, **kwargs),
                             var=var, window=window)
 
 
