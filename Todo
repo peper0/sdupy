@@ -1,18 +1,17 @@
 TODO:
+- nowe notifiery (nie wymagające asynciowego refreshera)
 - args need reaction żeby obejmowało też defaulty (trzeba robić tak samo jak rewrap)
-- graf z notifierów:
-  - labele na nodach
-  - zepsute przesuwanie
-  - click event (także prawy)
-  - global mouse event
-  - przepakowanie najpierw mouse eventów do osobnego dicta (optymalizacja)
-  - autopozycjonowanie
-  - descriptiony po najechaniu na noda
+- widget i window powinny przyjmować albo stringa albo instancję
+- sprawdzanie kompatybilności typu widgetów
+- dawanie widgetom długiej nazwy (do pokazania w menu) i hinta; możliwość zagnieżdżania w menu
+- własne menu widgetów (z możliwością pogrupowania ich i wyświetlaniem hintów po najechaniu)
 - podświetlanie krawędzi i sąsiadów po zaznaczeniu
+- dużo przykładów
 - testy do proxy
 - generowanie grafu
 - doce
   - używanie prostych zmiennych
+  - porównanie z oryginalnym kodem w Qt
   - okienka, wykresy, obrazki
 - obsługa błędów przy pierwszym wywołaniu (ignorować tylko błędy z argumentów)
 
@@ -26,6 +25,16 @@ TODO:
 stanów)? coś z lazy evaluation, ale wtedy nie wiemy jak dalego propagować notify observers (póki co i tak propagujemy do końca nie patrząc na to czy coś się faktycznie zmieniło)
 - zrobić, żeby eventy z QT miały priorytet (bardziej responsywne gui)
 - doc w restructured textcie i przykłady w pydoc
+- roi jako reaktywny shit
+
+- graf z notifierów:
+  - labele na nodach
+  - zepsute przesuwanie
+  - click event (także prawy)
+  - global mouse event
+  - przepakowanie najpierw mouse eventów do osobnego dicta (optymalizacja)
+  - autopozycjonowanie
+  - descriptiony po najechaniu na noda
 
 
 = nowy interfejs:

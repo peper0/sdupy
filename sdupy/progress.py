@@ -16,6 +16,10 @@ class Progress:
     def set_status(self, status):
         self._current_status = status
 
+    async def set_status_and_show(self, status):
+        self._current_status = status
+        await asyncio.sleep(0.001)
+
     async def checkpoint(self, progress, status=None):
         self.set_progress(progress)
         if status is not None:
