@@ -82,9 +82,10 @@ def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zv
 
 def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
     with ScopedName(name=widget_name+('.'+label if label else '')):
-        items = [make_pg_image_item(image, **kwargs)]
-        if items[0] is None:
+        if image is None:
             items = []
+        else:
+            items = [make_pg_image_item(image, **kwargs)]
         draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
@@ -220,8 +221,9 @@ def _paramtree_add_child(parent, param):
     if isinstance(parent, ParameterTree):
         root = parent.invisibleRootItem()  # type: QTreeWidgetItem
         for i in range(root.childCount()):
-            if root.child(i).text(0) == param.name():
-                root.removeChild(i)
+            child = root.child(i)
+            if child.text(0) == param.name():
+                root.removeChild(child)
         parent.addParameters(param)
         return None
     elif isinstance(parent, Parameter):
