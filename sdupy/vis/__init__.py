@@ -226,7 +226,7 @@ def _paramtree_add_child(parent, param):
         root = parent.invisibleRootItem()  # type: QTreeWidgetItem
         for i in range(root.childCount()):
             child = root.child(i)
-            if child.text(0) == param.name():
+            if child is not None and child.text(0) == param.name():
                 root.removeChild(child)
         parent.addParameters(param)
         return None
