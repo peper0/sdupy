@@ -20,3 +20,13 @@ def bind_vars(*vars):
 
     return [volatile(set_all(var)) for var in vars]
 
+
+def none_if_error(v):
+    @reactive(pass_args=['v'], dep_only_args=['v2'])
+    def helper(v):
+        try:
+            return v.__inner__
+        except Exception:
+            return None
+
+    return helper(v, v2=v)

@@ -293,11 +293,12 @@ class TaskParameterItem(ParameterItem):
         self.param.start_or_stop()
 
     @ignore_errors
-    def refresh(self, param, val):
+    def refresh(self, param: 'TaskParameter', val):
         self.progress_bar.setMaximum(1000)
-        progress = param.progress_tracker
+        progress = param.progress
+        status = param.status
         task = param.task
-        if progress is None or task is None:
+        if task is None:
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat('')
             self.start_stop_button.setText('start')
@@ -321,8 +322,8 @@ class TaskParameterItem(ParameterItem):
                 self.progress_bar.setFormat('finished')
             self.start_stop_button.setText('start')
         else:
-            self.progress_bar.setFormat('%p% {}'.format(progress._current_status))
-            self.progress_bar.setValue(progress._progress*1000)
+            self.progress_bar.setFormat('%p% {}'.format(status))
+            self.progress_bar.setValue(progress*1000)
             self.start_stop_button.setText('cancel')
 
 
@@ -335,11 +336,12 @@ class TaskParameter(Parameter):
         super().__init__(**opts)
         self.func = func
         self.task = None  # type: asyncio.Task
+        self.progress = None  # type: float
+        self.status = None  # type: str
         #self.progress_param = self.addChild(dict(name="progress", type='float', readonly=True, value=0))
         #self.state_param = self.addChild(dict(name="state", type='str', readonly=True, value=0))
         #self.result_param = self.addChild(dict(name="result", type='text', readonly=True))
 
-        self.progress_tracker = None
 
     @ignore_errors
     def start_or_stop(self):
@@ -347,27 +349,26 @@ class TaskParameter(Parameter):
             self.task.cancel()
         else:
             self.task = asyncio.ensure_future(self.run_task())
+            self.task.add_done_callback(self.task_finished_cbk)
+
+    def task_finished_cbk(self, f):
+        print('task finished')
+        self.sigValueChanged.emit(self, None)
 
     async def run_task(self):
-        #print("starting")
-        self.progress_tracker = Progress()
+        self.progress = 0.0
+        self.status = ''
         self.sigValueChanged.emit(self, None)
-        refresher = asyncio.ensure_future(self.show_progress())
         await asyncio.sleep(0.001)
-        await self.func(self.progress_tracker)
-        #self.progress_param.setValue(999)
-        #await refresher
-        #print("finished")
+        await self.func(self.checkpoint)
+        self.sigValueChanged.emit(self, None)
 
-    async def show_progress(self):
-        try:
-            while True:
-                await asyncio.sleep(0.1)
-                self.sigValueChanged.emit(self, None)
-                if self.task.done():
-                    return
-        except:
-            logging.exception("error in show_progress")
+
+    async def checkpoint(self, progress, status):
+        self.progress = progress
+        self.status = status
+        self.sigValueChanged.emit(self, None)
+        await asyncio.sleep(0.001)  # allow qt to repaint ans handle some queued events
 
 
 class ActionParameterItem(ParameterItem):

@@ -3,8 +3,6 @@ from functools import wraps
 
 
 #FIXME: rename to "log_errors" or "errors_to_log"
-
-
 def ignore_errors(f=None, *, retval=None):
     def wrap(f):
         @wraps(f)
