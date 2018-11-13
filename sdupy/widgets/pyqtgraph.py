@@ -243,12 +243,29 @@ class PathParameterItem(WidgetParameterItem):
     @ignore_errors
     def browse(self, xx):
         file_dialog = QFileDialog()
-        self.param.setValue(file_dialog.getExistingDirectory(directory=self.widget.value()))
+        path = file_dialog.getExistingDirectory(directory=self.widget.value())
+        if path:
+            self.param.setValue(path)
+
+
+class FilenameParameterItem(PathParameterItem):
+    @ignore_errors
+    def browse(self, xx):
+        file_dialog = QFileDialog()
+        if self.param.opts.get('save'):
+            path = file_dialog.getSaveFileName(directory=self.widget.value())
+        else:
+            path = file_dialog.getOpenFileName(directory=self.widget.value())
+        if path[0]:
+            self.param.setValue(path[0])
 
 
 class PathParameter(Parameter):
     itemClass = PathParameterItem
 
+
+class FilenameParameter(Parameter):
+    itemClass = FilenameParameterItem
 
 class TaskParameterItem(ParameterItem):
     def __init__(self, param: Parameter, depth):
