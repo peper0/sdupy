@@ -1,13 +1,37 @@
-from sdupy import vis
+from typing import Sequence, Union
+
+from sdupy import vis, unwrap
 
 
-def link_pg_axes(first: str, second: str, which={'x', 'y'}):
-    w1 = vis.widget(first).view
-    w2 = vis.widget(second).view
-    if 'x' in which:
-        w1.setXLink(w2)
-    if 'y' in which:
-        w1.setYLink(w2)
+def link_pg_axes(slaves: Union[str, Sequence[str]], master: str, which={'x', 'y'}):
+    if isinstance(slaves, str):
+        slaves = [slaves]
+    master_view = vis.widget(master).view
+    for slave in slaves:
+        try:
+            slave_view = vis.widget(slave).view
+            if 'x' in which:
+                slave_view.setXLink(master_view)
+            if 'y' in which:
+                slave_view.setYLink(master_view)
+        except Exception as e:
+            raise Exception("cannot link '{}' to '{}'".format(slave, master)) from e
+
+
+def link_mpl_axes(axes: Union[str, Sequence[str]], which={'x', 'y'}):
+    if isinstance(axes, str):
+        axes = [axes]
+    master, *slaves = axes
+    master_axes = unwrap(vis.axes(master))
+    for slave in slaves:
+        try:
+            slave_axes = unwrap(vis.axes(slave))
+            if 'x' in which:
+                master_axes.get_shared_x_axes().join(master_axes, slave_axes)
+            if 'y' in which:
+                master_axes.get_shared_y_axes().join(master_axes, slave_axes)
+        except Exception as e:
+            raise Exception("cannot link '{}' to '{}'".format(slave, master)) from e
 
 
 def pg_roi_add_8handles(roi_item):
