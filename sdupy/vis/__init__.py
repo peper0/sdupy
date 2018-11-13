@@ -75,6 +75,10 @@ def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
     plot = getattr(ax, plot_fn)
     global_refs[(ax.__inner__, plot_name)] = trigger_if_visible(plot(*args, **kwargs),
                                                               ax.__inner__.get_figure().canvas.parentWidget())
+    gc.collect()
+
+    if plot_name:
+        ax.legend()
 
 
 def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zvalue=None, window=None):

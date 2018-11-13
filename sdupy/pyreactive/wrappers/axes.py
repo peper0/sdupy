@@ -69,7 +69,6 @@ class ReactiveAxes(Wrapper):
     broken_barh = plot_method(plt.Axes.broken_barh)
     vlines = plot_method(plt.Axes.vlines)
     hlines = plot_method(plt.Axes.hlines)
-    hlines = plot_method(plt.Axes.hlines)
     fill = plot_method(plt.Axes.fill)
 
     # Plotting.Spans

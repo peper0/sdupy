@@ -18,13 +18,13 @@ class Progress:
 
     async def set_status_and_show(self, status):
         self._current_status = status
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.000001)
 
     async def checkpoint(self, progress, status=None):
         self.set_progress(progress)
         if status is not None:
             self.set_status(status)
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.000001)
 
 
 async def reporting_progress(seq: Sequence, checkpoint, size=None, status=None, div=1):
@@ -36,10 +36,11 @@ async def reporting_progress(seq: Sequence, checkpoint, size=None, status=None, 
         if i % div == 0:
             if checkpoint is not None:
                 await checkpoint((i + 1) / size, status)
-                await asyncio.sleep(0.001)
+                await asyncio.sleep(0.000001)
+    await checkpoint(1.0, status)
 
 
-def subcheckpoint(checkpoint, start, stop, parent_status):
+def subcheckpoint(checkpoint, start, stop, parent_status=None):
     if checkpoint is None:
         return None
 
@@ -50,7 +51,7 @@ def subcheckpoint(checkpoint, start, stop, parent_status):
             st = status
         else:
             st = parent_status + " / " + status
-        return await checkpoint(progress / (stop-start) + start, st)
+        return await checkpoint(progress * (stop-start) + start, st)
 
     return f
 
