@@ -35,6 +35,7 @@ BINARY_OPERATORS = [
     ('__mod__', operator.__mod__),
     ('__divmod__', divmod),
     ('__pow__', operator.__pow__),
+    ('__matmul__', operator.__matmul__),
     ('__radd__', right_2arg(operator.__add__)),
     ('__rsub__', right_2arg(operator.__sub__)),
     ('__rmul__', right_2arg(operator.__mul__)),
@@ -43,6 +44,7 @@ BINARY_OPERATORS = [
     ('__rmod__', right_2arg(operator.__mod__)),
     ('__rdivmod__', right_2arg(divmod)),
     ('__rpow__', right_2arg(operator.__pow__)),
+    ('__rmatmul__', right_2arg(operator.__matmul__)),
     # logic
     ('__and__', operator.__and__),
     ('__or__', operator.__or__),
