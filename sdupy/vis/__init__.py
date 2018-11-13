@@ -1,3 +1,4 @@
+import gc
 from functools import wraps
 from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Coroutine
 
@@ -171,12 +172,14 @@ def clear_variables(widget_name: str):
     vars_table.clear()
 
 
-def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, window=None):
+def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, value=None, window=None):
 
     w = widget(widget_name, Slider, window)
     if var is not None:
         w.var = var
     global_refs[(w, 'set_params')] = volatile(reactive(w.set_params)(min, max, step))
+    if value is not None:
+        w.var.__inner__ = value
     return w.var
 
 
@@ -330,9 +333,9 @@ def combo_in_paramtree(widget_name: str, param_path: Sequence[str], choices, var
     return res
 
 
-def checkbox_in_paramtree(widget_name: str, param_path: Sequence[str], var: Wrapped = None, *, window=None):
+def checkbox_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, *, window=None):
     *parent_path, name = param_path
-    param = Parameter.create(name=name, type='bool')
+    param = Parameter.create(name=name, type='bool', value=value, default=value)
     res = var_in_paramtree(widget_name, parent_path, param=param, var=var, window=window)
     return res
 
