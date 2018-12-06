@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
+from progress_checkpoint.sync_progress import Checkpoint
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
@@ -20,7 +21,6 @@ from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg
 from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs
-from sdupy.progress import Progress
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
 from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
@@ -291,7 +291,7 @@ def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wr
     return var
 
 
-def task_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[Progress], Coroutine] = None, *,
+def task_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[Checkpoint], Coroutine] = None, *,
                       window=None):
     *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)

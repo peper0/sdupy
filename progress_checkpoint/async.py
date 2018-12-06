@@ -1,30 +1,12 @@
 import asyncio
 from typing import Sequence
-import logging
 
 
-class Progress:
-    def __init__(self):
-        self.logger = logging.getLogger()
-        self._progress = 0
-        self._current_status = ""
-        self.set_progress_cbk = lambda: None
+"""
+WARNING! copy-pasted from progress_checkpoint.progress!
 
-    def set_progress(self, val):
-        self._progress = val
-
-    def set_status(self, status):
-        self._current_status = status
-
-    async def set_status_and_show(self, status):
-        self._current_status = status
-        await asyncio.sleep(0.000001)
-
-    async def checkpoint(self, progress, status=None):
-        self.set_progress(progress)
-        if status is not None:
-            self.set_status(status)
-        await asyncio.sleep(0.000001)
+NOTE! consider using sync_progress instead of this one
+"""
 
 
 async def reporting_progress(seq: Sequence, checkpoint, size=None, status=None, div=1):
@@ -56,5 +38,5 @@ def subcheckpoint(checkpoint, start, stop, parent_status=None):
     return f
 
 
-async def dummy_checkpoint(progress, status):
+async def dummy_checkpoint(progress, status=None):
     return
