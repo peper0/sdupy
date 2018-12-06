@@ -9,7 +9,6 @@ from sdupy.pyreactive import Wrapped, is_wrapper
 from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.refresher import logger as notify_logger
 from sdupy.pyreactive.var import Proxy
-from sdupy.utils import trace
 
 
 def paramtree_get_root_parameters(pt: ParameterTree) -> Sequence[Parameter]:
@@ -47,7 +46,6 @@ class TriggerIfVisible(Proxy):
         self._other_var.__notifier__.add_observer(self._notifier)
         self.widget.visibilityChanged.connect(self._trigger)
 
-    @trace
     def _is_visible(self):
         if hasattr(self.widget, 'visibleRegion2'):
             return bool(self.widget.visibleRegion2().rects())

@@ -416,8 +416,6 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
             self.endInsertRows()
         except Exception:
             self.handleError(record)
-        if len(self.records) % 10 == 0:
-            logging.fatal('has %d records', len(self.records))
 
     def __repr__(self):
         level = logging.getLevelName(self.level)

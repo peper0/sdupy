@@ -144,9 +144,9 @@ def set_scatter_data_pg(widget: ScatterPlotWidget, data):
                 data_ar[i][k] = to_acceptable_value(v)
 
         def field_flags(name, ftype, values):
-            if not issubclass(ftype, Number) or (isinstance(ftype, Integral) and len(values) < 10):
+            if not issubclass(ftype, Number):
                 return dict(mode='enum', values=list(values))
-            return dict()
+            return dict(values=list(values))
 
         widget.setFields([(name, field_flags(name, ftypes[name], fvalues[name]))
                           for name in ftypes])

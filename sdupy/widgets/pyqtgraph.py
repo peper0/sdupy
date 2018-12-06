@@ -1,15 +1,14 @@
 import asyncio
 import logging
-from math import isfinite
+import time
 
 import pyqtgraph as pg
-from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout, QLabel
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+from pyqtgraph.widgets.DataFilterWidget import RangeFilterItem, EnumFilterItem
 
-from sdupy.progress import Progress
 from sdupy.utils import ignore_errors
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
 from . import register_widget
@@ -152,6 +151,12 @@ class PgScatter(pg.ScatterPlotWidget):
         self.info_label.setParentItem(self.plot.plotItem)
         self.show_info()
 
+    def addNewAsEnum(self, name):
+        f = self.filter
+        item = EnumFilterItem(name, f.fields[name])
+        f.addChild(item)
+        return item
+
     def dump_state(self):
         filter_state = self.filter.saveState()
         filter_state['addList'] = list(filter_state['addList'])
@@ -180,7 +185,7 @@ class PgScatter(pg.ScatterPlotWidget):
                             text += '{}: {}\n'.format(k, v)
                         text += '\n'
                     self.info_label.setText(text)
-                    print(text)
+                    #print(text)
 
             self._show_cursor_proxy = pg.SignalProxy(plot_item.scene().sigMouseMoved, rateLimit=15, slot=mouseMoved)
 
@@ -209,6 +214,10 @@ class PgScatter(pg.ScatterPlotWidget):
 class PgDataTree(pg.DataTreeWidget):
     def __init__(self, parent, name):
         super().__init__(parent)
+
+    @property
+    def visibilityChanged(self):
+        return self.parentWidget().visibilityChanged
 
 
 class PathParameterItem(WidgetParameterItem):
@@ -266,6 +275,7 @@ class PathParameter(Parameter):
 
 class FilenameParameter(Parameter):
     itemClass = FilenameParameterItem
+
 
 class TaskParameterItem(ParameterItem):
     def __init__(self, param: Parameter, depth):
@@ -380,8 +390,9 @@ class TaskParameter(Parameter):
         await self.func(self.checkpoint)
         self.sigValueChanged.emit(self, None)
 
-
-    async def checkpoint(self, progress, status):
+    async def checkpoint(self, progress, status=None):
+        if status != self.status or abs(progress - self.progress) >= 0.01:
+            print("{:14.3f} {:5.1f}% {}".format(time.time(), progress*100, status))
         self.progress = progress
         self.status = status
         self.sigValueChanged.emit(self, None)
