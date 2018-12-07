@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
-from progress_checkpoint.sync_progress import Checkpoint
+from progress_checkpoint.sync import Checkpoint
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName

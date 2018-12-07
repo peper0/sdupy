@@ -3,7 +3,6 @@ from typing import Sequence
 
 
 """
-WARNING! copy-pasted from progress_checkpoint.progress!
 
 NOTE! consider using sync_progress instead of this one
 """
