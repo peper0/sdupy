@@ -55,7 +55,7 @@ class TriggerIfVisible(Proxy):
     def _trigger(self):
         if self._is_visible():
             with suppress(Exception):
-                notify_logger.info('widget {} is visible; updating {}'.format(self.widget.objectName(),
+                notify_logger.debug('widget {} is visible; updating {}'.format(self.widget.objectName(),
                                                                               self._other_var.__notifier__.name))
                 self._other_var.__inner__  # trigger run even if the result is not used
         return True

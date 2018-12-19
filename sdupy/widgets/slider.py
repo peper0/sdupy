@@ -61,7 +61,7 @@ class Slider(QWidget):
     @reactive
     def _set_all_to(self, value):
         #print("set all to ", value)
-        if self._min > self._max:
+        if self._min is not None and self._max is not None and self._min > self._max:
             set_if_inequal(self._var, None)
             return
 
@@ -122,14 +122,14 @@ class Slider(QWidget):
 
     def dump_state(self):
         return dict(
-            min=self._min,
-            max=self._max,
-            step=self._step,
+#            min=self._min,
+#            max=self._max,
+#            step=self._step,
             value=unwrap(self._var)
         )
 
     def load_state(self, state: dict):
-        self.set_params(state['min'], state['max'], state['step'])
+#        self.set_params(state['min'], state['max'], state['step'])
         value = state['value']
         if self._uses_integer() and value is not None:
             value = int(round(value))

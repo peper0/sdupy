@@ -28,3 +28,11 @@ class ProgressbarCheckpoint:
         self.pb.update(progress)
         if progress >= 1.0:
             self.pb.finish()
+
+
+class ProgressbarCheckpointAsync:
+    def __init__(self):
+        self.sync = ProgressbarCheckpoint()
+
+    async def __call__(self, *args, **kwargs):
+        return self.sync(*args, **kwargs)
