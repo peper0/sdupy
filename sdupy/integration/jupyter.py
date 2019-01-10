@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import traceback
 
 from ipykernel.eventloops import register_integration
 
@@ -23,7 +24,11 @@ def run_loop_in_jupyter(kernel):
 
     loop.call_soon(kernel_handler)
     with loop:  ## context manager calls .close() when loop completes, and releases all resources
-        loop.run_forever()
+        try:
+            loop.run_forever()
+        except:
+            traceback.print_exc()
+
     print("sdupy integration finished")
 
 

@@ -37,16 +37,23 @@ def image_to_mpl(image: np.ndarray, is_bgr=True):
     return image
 
 
+@reactive
+def pg_hold_items_unroll(pg_parent, items, zvalue=None):
+    return pg_hold_items(pg_parent, *items, zvalue=zvalue)
+
+
 @reactive_finalizable
 def pg_hold_items(pg_parent, *items, zvalue=None):
     for item in items:
-        if zvalue is not None:
-            assert item is not None
-            item.setZValue(zvalue)
-        pg_parent.addItem(item)
+        if item is not None:
+            if zvalue is not None:
+                assert item is not None
+                item.setZValue(zvalue)
+            pg_parent.addItem(item)
     yield
     for item in items:
-        pg_parent.removeItem(item)
+        if item is not None:
+            pg_parent.removeItem(item)
 
 
 @reactive

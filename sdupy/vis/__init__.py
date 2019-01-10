@@ -11,14 +11,15 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
-from progress_checkpoint.sync import Checkpoint
+from progress_checkpoint.common import Checkpoint
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
 from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.utils import ignore_errors
-from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg
+from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg, \
+    pg_hold_items_unroll
 from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
@@ -85,16 +86,12 @@ def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
 def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zvalue=None, window=None):
     from sdupy.widgets.pyqtgraph import PgFigure
     w = widget(widget_name, PgFigure, window=window)
-
-    global_refs[(w, label)] = trigger_if_visible(pg_hold_items(w.view, *items, zvalue=zvalue), w)
+    global_refs[(w, label)] = trigger_if_visible(pg_hold_items_unroll(w.view, items, zvalue=zvalue), w)
 
 
 def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
     with ScopedName(name=widget_name+('.'+label if label else '')):
-        if image is None:
-            items = []
-        else:
-            items = [make_pg_image_item(image, **kwargs)]
+        items = [make_pg_image_item(image, **kwargs)]
         draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
@@ -249,18 +246,23 @@ def _paramtree_add_child(parent, param):
 
 
 def param_in_paramtree(widget_name: str, param_path: Sequence[str], param, *, window=None):
+    parent = group_in_paramtree(widget_name, param_path, window)
+
+    _paramtree_add_child(parent, param)
+
+
+def group_in_paramtree(widget_name, param_path, window=None):
     assert isinstance(widget_name, str)
-    param_tree = widget(widget_name, PgParamTree, window).param_tree   # type: ParameterTree
+    param_tree = widget(widget_name, PgParamTree, window).param_tree  # type: ParameterTree
     parent = param_tree
-    #for i in range(len(param_path)-1):
+    # for i in range(len(param_path)-1):
     for i in param_path:
         child = _paramtree_find_child(parent, i)
         if child is None:
             child = Parameter.create(name=i, type='group')
             _paramtree_add_child(parent, child)
         parent = child
-
-    _paramtree_add_child(parent, param)
+    return parent
 
 
 class PgParamVar(QtSignaledVar):
@@ -291,7 +293,8 @@ def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wr
     return var
 
 
-def task_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[Checkpoint], Coroutine] = None, *,
+def task_in_paramtree(widget_name: str, param_path: Sequence[str],
+                      func: Callable[[Checkpoint], Any] = None, *,
                       window=None):
     *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)
