@@ -6,7 +6,7 @@ from .figure import Figure
 from .pyqtgraph import PgPlot, PgViewBox
 from .slider import Slider
 # from .console import make_console
-from .tables import PandasTable, VarsTable, ArrayTable
+from .tables import VarsTable, ArrayTable
 from .combo import ComboBox
 
 
