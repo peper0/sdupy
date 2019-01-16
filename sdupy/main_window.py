@@ -10,7 +10,7 @@ from sdupy.utils import ignore_errors
 from . import widgets
 from .widgets.common.register import FactoryDesc
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)  # does it work? without stream=...?
 
 
 class WidgetInstance(NamedTuple):
@@ -37,9 +37,9 @@ class MainWindow(QMainWindow):
         self.save_layout_action.setEnabled(bool(self.persistence_id))
         self.menuBar().addMenu(self.file_menu)
 
-        self.add_menu = QMenu('&Add widget', self)
-        self.menuBar().addSeparator()
-        self.menuBar().addMenu(self.add_menu)
+        #self.add_menu = QMenu('&Add widget', self)
+        #self.menuBar().addSeparator()
+        #self.menuBar().addMenu(self.add_menu)
 
         self.remove_menu = QMenu('&Remove widget', self)
         self.menuBar().addMenu(self.remove_menu)
@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
                                          self.generate_widget_name(factory_desc.name),
                                          self.generate_widget_title(factory_desc.pretty_name))
 
-        self.add_menu.addAction(factory_desc.pretty_name, add_widget)
+        #self.add_menu.addAction(factory_desc.pretty_name, add_widget)
 
     def add_widget_from_factory(self, factory_desc: FactoryDesc, widget_name, title):
         docked = QDockWidget(title)
