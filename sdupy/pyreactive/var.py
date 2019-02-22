@@ -13,7 +13,6 @@ from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier, ScopedName
-from .refresher import logger
 
 
 class Wrapper(Wrapped):
@@ -402,7 +401,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _update_if_dirty(self):
         if self._dirty:
             # FIXME: doesn't work for async updates
-            logger.debug('updating {}'.format(self._notifier.name))
+            #logger.debug('updating {}'.format(self._notifier.name))
             updates_stack.append(self._notifier.line)
             try:
                 hide_nested_calls(self._update)()

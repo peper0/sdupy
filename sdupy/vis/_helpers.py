@@ -123,6 +123,11 @@ def flatten_dicts(record, prefix=''):
 
 @reactive
 def set_scatter_data_pg(widget: ScatterPlotWidget, data):
+    def field_flags(name, ftype, values):
+        if not issubclass(ftype, Number):
+            return dict(mode='enum', values=list(values))
+        return dict(values=set(list(values)))
+
     if isinstance(data, Sequence) and len(data) > 0 and isinstance(data[0], Mapping):
         ftypes = OrderedDict()
         fvalues = OrderedDict()
@@ -150,13 +155,13 @@ def set_scatter_data_pg(widget: ScatterPlotWidget, data):
             for k, v in flatten_dicts(record):
                 data_ar[i][k] = to_acceptable_value(v)
 
-        def field_flags(name, ftype, values):
-            if not issubclass(ftype, Number):
-                return dict(mode='enum', values=list(values))
-            return dict(values=list(values))
-
         widget.setFields([(name, field_flags(name, ftypes[name], fvalues[name]))
                           for name in ftypes])
+
+    elif isinstance(data, np.ndarray):
+        widget.setFields([(name, field_flags(name, data.dtype.fields[name][0].type, data[name]))
+                          for name in data.dtype.names])
+        data_ar = data
 
     else:
         raise Exception("data type not supported, you may want to add the support here")

@@ -210,6 +210,10 @@ class ArrayModel(QAbstractTableModel):
         assert hasattr(array, '__getitem__')
         self._array = array  # type: np.ndarray
         self.format = None
+        if self._array.ndim >= 2:
+            self._columns = list(range(self._array.shape[1]))
+        else:
+            self._columns = self._array.dtype.names
 
         # if array.shape[0]>0:
         #     self.beginInsertRows(QModelIndex(), 0, array.shape[0]-1)
@@ -227,22 +231,16 @@ class ArrayModel(QAbstractTableModel):
 
     @ignore_errors(retval=0)
     def columnCount(self, parent=None):
-        return self._array.shape[1]
+        return len(self._columns)
 
     @ignore_errors
     def data(self, index: QModelIndex, role=Qt.DisplayRole):
         assert self.format is not None
         assert isinstance(self.format, str)
-        #print("get data", role)
-        #print("index: ", index.row(), index.column(), role)
         if self._index_is_good(index):
-            #print("good")
             if role in [Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.StatusTipRole]:
-                #print("foramt:", self.format)
-                res = self.format.format(self._array[index.row(), index.column()])
-                #print("returning", res)
+                res = self.format.format(self._array[index.row()][index.column()])
                 return res
-
 
     @ignore_errors(retval=Qt.ItemFlags())
     def flags(self, index: QModelIndex):
@@ -251,18 +249,16 @@ class ArrayModel(QAbstractTableModel):
         return super().flags(index)
 
     def _index_is_good(self, index: QModelIndex):
-        #print(self._array.shape)
         res = (index.isValid()
                and index.row() < self._array.shape[0]
-               and index.column() < self._array.shape[1])
-        #print("good?", res)
+               and index.column() < len(self._columns))
         return res
 
     @ignore_errors
     def setData(self, index: QModelIndex, value: Any, role: int):
         if self._index_is_good(index):
             try:
-                self._array[index.row(), index.column()] = eval(value)
+                self._array[index.row()][index.column()] = eval(value)
             except Exception as e:
                 logging.exception('exception during setting var (ignoring)')
             return True
@@ -271,7 +267,10 @@ class ArrayModel(QAbstractTableModel):
     @ignore_errors
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return str(section)
+            if orientation == Qt.Horizontal:
+                return str(self._columns[section])
+            else:
+                return str(section)
 
 
 @reactive()
@@ -380,16 +379,16 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
 
 global_logger_handler = LogRecordsModel()
 
-logging.getLogger().addHandler(global_logger_handler)
 # logging.getLogger().setLevel(logging.DEBUG)
 # global_logger_handler.setLevel(logging.DEBUG)
 
-logging.getLogger().setLevel(logging.INFO)
-global_logger_handler.setLevel(logging.INFO)
+# logging.getLogger().setLevel(logging.INFO)
+# global_logger_handler.setLevel(logging.INFO)
 
 
 @register_widget("logs")
 class Logs(Table):
     def __init__(self, parent, name):
+        logging.getLogger().addHandler(global_logger_handler)
         super().__init__(parent)
         self._table_view.setModel(global_logger_handler)

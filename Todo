@@ -14,6 +14,8 @@ TODO:
   - porównanie z oryginalnym kodem w Qt
   - okienka, wykresy, obrazki
 - obsługa błędów przy pierwszym wywołaniu (ignorować tylko błędy z argumentów)
+- BUG slider przesuwa się dwa razy na jeden klik (może dlatego, że przetwarza na tyle długo, że uznaje to za przytrzymanie myszy... w każdym razie faktycznie property slidera zmnienia się dwa razy)
+
 
 - plugin
 - await z konsoli

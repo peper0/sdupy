@@ -106,6 +106,8 @@ def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, 
         set_image_args.setdefault('autoRange', False)
         set_image_args.setdefault('autoLevels', False)
         set_image_args.setdefault('autoHistogramRange', True)
+        if image is None:
+            image = np.zeros((1, 1))
         if 'axes' not in set_image_args:
             if image.ndim == 4:
                 set_image_args['axes'] = dict(t=0, y=1, x=2, c=3)
