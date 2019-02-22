@@ -1,8 +1,12 @@
 import asyncio
 import sys
+import signal
 
 import quamash
 from PyQt5 import QtCore
+
+# Some magic from https://stackoverflow.com/questions/5160577/ctrl-c-doesnt-work-with-pyqt
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 loop = None
 
