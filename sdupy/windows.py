@@ -30,7 +30,7 @@ def window(name: WindowSpec = None, default_state_dir=None):
                 break
         app_id = None
     else:
-        app_id = "".join(c if c.isalnum() or c in ' .' else '_{:x}_'.format(ord(c)) for c in name)
+        app_id = "".join(c if c.isalnum() or c in ' ._' else '_{:x}_'.format(ord(c)) for c in name)
 
     if name in windows_by_name:
         window = windows_by_name[name]

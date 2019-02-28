@@ -62,9 +62,13 @@ class Constant(Wrapped, ConstForwarders):
     def _target(self):
         return self
 
-    #Not sure whether we should simply forward it
+    #Not sure whether we should simply forward it without @reactive
+    #without @reactive const(v).something() is not reactive anymore, which is bad
+    #so let's see what happens if we change it...
+    @reactive
     def __getattr__(self, item):
-        return getattr(self._target().__inner__, item)
+        #return getattr(self._target().__inner__, item)
+        return getattr(self, item)
 
 
 def const(raw):
@@ -130,7 +134,7 @@ class Var(Wrapper, ConstForwarders, MutatingForwarders):
         self.set(other)
         return self
 
-    #Not sure whether we should simply forward it
+    #Not sure whether we should simply forward it (see Const.__getattr__)
     def __getattr__(self, item):
         return getattr(self._target().__inner__, item)
 
