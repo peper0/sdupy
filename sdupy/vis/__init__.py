@@ -420,3 +420,13 @@ def decor_action_in_menu(path: Sequence[str],
         return func
 
     return f
+
+
+def set_titles_mpl(name, title=None, x=None, y=None):
+    if title is not None:
+        sdupy.unwrap(vis.axes(name)).set_title(title)
+    if x is not None:
+        sdupy.unwrap(vis.axes(name)).set_xlabel(x)
+    if y is not None:
+        sdupy.unwrap(vis.axes(name)).set_ylabel(y)
+    vis.widget(name).tight_layout()

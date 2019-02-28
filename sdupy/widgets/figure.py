@@ -110,6 +110,9 @@ class Figure(QWidget):
         self.canvas.draw_idle()
 
     def resizeEvent(self, a0: QtGui.QResizeEvent):
+        self.tight_layout()
+
+    def tight_layout(self):
         self.figure.tight_layout(pad=0.5)
 
     @staticmethod

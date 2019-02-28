@@ -58,8 +58,8 @@ class MainWindow(QMainWindow):
 
         self.user_state_path = os.path.join(appdirs.user_data_dir('sdupy', 'peper0'),
                                             "{}.state.json".format(self.app_id)) if app_id else None
-        self.default_state_path = os.path.join(default_state_dir,
-                                               "{}.state.json".format(self.app_id)) if app_id else None
+        self.default_state_path = os.path.join(default_state_dir, "{}.state.json".format(self.app_id)) \
+            if app_id and default_state_dir else None
 
         self.load_state_std()
 
