@@ -134,10 +134,10 @@ def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwarg
     return image_pg_adv(widget_name, image, window, axes=dict(t=0, y=1, x=2), **kwargs)
 
 
-def graph_pg(widget_name: str, pos, adj, window=None, label=None, **kwargs):
+def graph_pg(widget_name: str, pos, adj, window=None, label=None, zvalue=None, **kwargs):
     print("image_pg")
     items = [make_graph_item_pg(pos, adj, **kwargs)]
-    draw_pg(widget_name, ('__graph__', label), items, window=window)
+    draw_pg(widget_name, ('__graph__', label), items, window=window, zvalue=zvalue)
     return items[0]
 
 

@@ -2,11 +2,9 @@ import asyncio
 import gc
 import logging
 from contextlib import suppress
-from typing import Any, Callable, NamedTuple
+from typing import Any, NamedTuple
 
 import sys
-
-from sdupy.pyreactive.common import NotifyFunc
 
 stderr_logger_handler = logging.StreamHandler(stream=sys.stderr)
 stderr_logger_handler.setLevel(logging.DEBUG)
@@ -73,7 +71,7 @@ class AsyncRefresher:
                         logger.debug('notifier [{:X}] {} called more than once'.format(id(notifier), notifier.name))
                     notified_notifiers.add(notifier)
                     logger.debug('call notification ({}) [{:X}] {}'.format(notifier.priority, id(notifier),
-                                                                         notifier.name))
+                                                                           notifier.name))
 
                     res = notifier.notify()
                     if asyncio.iscoroutine(res):
@@ -88,8 +86,6 @@ class AsyncRefresher:
                         logger.debug(' finished')
                     else:
                         logger.debug(' notification finished with False')
-
-
 
                 except Exception as e:
                     logger.exception('ignoring exception when in notifying observer {}'.format(notification.notifier))

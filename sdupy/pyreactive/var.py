@@ -429,6 +429,9 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         await self._update()
         return True
 
+    def _cleanup(self):
+        pass
+
 
 class HashableCallable:
     def __init__(self, callable, uid):

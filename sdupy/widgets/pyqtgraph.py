@@ -10,8 +10,7 @@ from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 from pyqtgraph.widgets.DataFilterWidget import RangeFilterItem, EnumFilterItem
 
-from common.async import make_async_using_thread, make_sync
-from sdupy.utils import ignore_errors
+from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
 from . import register_widget
 
