@@ -63,7 +63,8 @@ class Reactive:
                 from .var import AsyncReactiveProxy
                 res = AsyncReactiveProxy(decorated, args, kwargs)
                 if args_need_reaction(res.args, res.kwargs):
-                    return res._update(res)
+                    #return res._update(res)
+                    return res
                 else:
                     return decorated.really_call(args, kwargs)
         elif hasattr(func, '__call__'):
@@ -72,7 +73,8 @@ class Reactive:
                 from .var import SyncReactiveProxy
                 res = SyncReactiveProxy(decorated, args, kwargs)
                 if args_need_reaction(res.args, res.kwargs):
-                    return res._update(res)
+                    #return res._update(res)
+                    return res
                 else:
                     return decorated.really_call(args, kwargs)
         else:

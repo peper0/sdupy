@@ -184,7 +184,7 @@ def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, value=N
 
 def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], window=None):
     w = widget(widget_name, ComboBox, window)
-    global_refs[(w, 'set_choices')] = reactive(w.set_choices)(choices)
+    global_refs[(w, 'set_choices')] = volatile(reactive(w.set_choices)(choices))
     # if widget.combo.currentIndex() < 0:
     #     widget.combo.setCurrentIndex(0)
     return w.data_var

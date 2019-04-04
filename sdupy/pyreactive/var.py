@@ -257,6 +257,7 @@ class VolatileProxy(Proxy):
         with ScopedName('volatile'):
             super().__init__(other_var)
         self._notifier.notify_func = self._trigger
+        self._trigger()
 
     def _trigger(self):
         with suppress(Exception):
@@ -336,12 +337,12 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
     """
 
-    def __init__(self, async):
+    def __init__(self, _async):
         super().__init__()
-        self.async = async
+        self._async = _async
         self._ref = None
         self._dirty = False
-        if async:
+        if _async:
             # I have no idea how to call do lazy updating if update is async (and getter isn't)
             self._notifier = Notifier(self._update_async)
         else:
@@ -451,7 +452,7 @@ class HashableCallable:
 class ReactiveProxy(LazySwitchableProxy):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
         with ScopedName(name=decorated.callable.__name__):
-            super().__init__(async=iscoroutinefunction(self._update))
+            super().__init__(_async=iscoroutinefunction(self._update))
         self.decorated = decorated  # type: DecoratedFunction
 
         # use dep_only_args
@@ -499,16 +500,16 @@ class ReactiveProxy(LazySwitchableProxy):
         # - a coroutine (to be awaited),
         # - a generator to be run once and finalized before the next call
         # - an async generator
+        if self._update_in_progress != False:
+            print("xle")
         assert self._update_in_progress == False, 'circular dependency containing {}'.format(self.__notifier__.name)
         try:
             self._update_in_progress = True
             args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
             res = self.decorated.really_call(args, kwargs)
+        finally:
             self._update_in_progress = False
-            return res
-        except Exception:
-            self._update_in_progress = False
-            raise
+        return res
 
     @abstractmethod
     def _update(self, retval=None):

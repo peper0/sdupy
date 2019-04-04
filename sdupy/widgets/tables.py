@@ -1,8 +1,8 @@
 import asyncio
+import gc
 import io
 import traceback
 from typing import Any, Callable, List, NamedTuple
-import gc
 
 import numpy as np
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
@@ -163,6 +163,7 @@ class ArrayTable(QWidget):
         self.setLayout(self.layout)
 
         self._table_view = QTableView(self)
+        self._table_view.horizontalHeader().setSectionsMovable(True)
         self.layout.addWidget(self._table_view)
 
         self._format = self.DEFAULT_FORMAT
@@ -170,6 +171,7 @@ class ArrayTable(QWidget):
         self._var = None
         self._setter = None
         self._set_current_val(np.array([[]]))
+
         self.visibilityChanged = parent.visibilityChanged  # FIXME:
 
     @property
@@ -194,6 +196,20 @@ class ArrayTable(QWidget):
 
     def update(self):
         self._setter = trigger_if_visible(reactive(self._set_current_val)(self._var), self)
+
+    def dump_state(self):
+        return dict(
+            header_state=bytes(self._table_view.horizontalHeader().saveState()).hex(),
+            header_geometry=bytes(self._table_view.horizontalHeader().saveGeometry()).hex(),
+        )
+
+    def load_state(self, state: dict):
+        # it doesn't work
+        # if 'header_state' in state:
+        #     self._table_view.horizontalHeader().restoreState(bytes.fromhex(state['header_state']))
+        # if 'header_geometry' in state:
+        #     self._table_view.horizontalHeader().restoreGeometry(bytes.fromhex(state['header_state']))
+        pass
 
     def _set_current_val(self, val):
         self._model = ArrayModel(val, self)
@@ -378,6 +394,7 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
 
 
 global_logger_handler = LogRecordsModel()
+
 
 # logging.getLogger().setLevel(logging.DEBUG)
 # global_logger_handler.setLevel(logging.DEBUG)

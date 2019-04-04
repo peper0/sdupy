@@ -39,7 +39,7 @@ asyncio_is_working = False
 async def asyncio_test_coro():
     global asyncio_is_working
     asyncio_is_working = True
-    asyncio.sleep(1)
+    await asyncio.sleep(0.001)
     sys.stderr.write("asyncio loop is working!\n")
 
 

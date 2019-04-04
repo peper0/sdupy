@@ -2,9 +2,10 @@ import asyncio
 from contextlib import suppress
 
 from PyQt5.QtWidgets import QApplication
-
 from _pydev_bundle.pydev_import_hook import import_hook_manager
 from pydev_ipython.inputhook import set_inputhook
+
+from sdupy.utils import ignore_errors
 from .common import QEventLoop, init_quamash, test_asyncio
 
 # bypass some pydev hacks that breaks everything
@@ -21,6 +22,7 @@ matplotlib.use('module://sdupy.matplotlib_backend')
 app = None
 
 
+@ignore_errors
 def asyncio_inputhook():
     loop = asyncio.get_event_loop()
     assert loop is not None

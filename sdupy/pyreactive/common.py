@@ -40,6 +40,9 @@ class Wrapped(Generic[T]):
         """
         pass
 
+    def __repr__(self):
+        return "Wrapped({})".format(repr(self.__inner__))
+
 
 def is_wrapper(v):
     return isinstance(v, Wrapped)

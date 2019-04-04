@@ -44,16 +44,24 @@ def pg_hold_items_unroll(pg_parent, items, zvalue=None):
 
 @reactive_finalizable
 def pg_hold_items(pg_parent, *items, zvalue=None):
+    vb = pg_parent.vb if hasattr(pg_parent, 'vb') else pg_parent
+    ar = vb.autoRangeEnabled()  # it slow downs when inserting many objects
+    vb.disableAutoRange()
+
     for item in items:
         if item is not None:
             if zvalue is not None:
                 assert item is not None
                 item.setZValue(zvalue)
             pg_parent.addItem(item)
+    vb.enableAutoRange(x=ar[0], y=ar[0])
     yield
+    ar = vb.autoRangeEnabled()  # it slow downs when inserting many objects
+    vb.disableAutoRange()
     for item in items:
         if item is not None:
             pg_parent.removeItem(item)
+    vb.enableAutoRange(x=ar[0], y=ar[0])
 
 
 @reactive
