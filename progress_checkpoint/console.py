@@ -25,9 +25,10 @@ class ProgressbarCheckpoint:
                 self.status_label.format_string = status_string(status)
                 print(status)
             self.last_status = status
-        self.pb.update(progress)
         if progress >= 1.0:
             self.pb.finish()
+        else:
+            self.pb.update(progress)
 
 
 class ProgressbarCheckpointAsync:

@@ -4,6 +4,7 @@ from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Corout
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pyqtgraph as pg
 from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget, QMenu, QAction, QMenuBar
@@ -12,6 +13,7 @@ from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
 from progress_checkpoint.common import Checkpoint
+from sdupy import reactive
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
@@ -24,6 +26,7 @@ from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visi
 from sdupy.vis.globals import global_refs
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
 from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter
+from zebra.stitching.common import Extent
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -184,7 +187,7 @@ def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, value=N
 
 def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], window=None):
     w = widget(widget_name, ComboBox, window)
-    global_refs[(w, 'set_choices')] = reactive(w.set_choices)(choices)
+    global_refs[(w, 'set_choices')] = volatile(reactive(w.set_choices)(choices))
     # if widget.combo.currentIndex() < 0:
     #     widget.combo.setCurrentIndex(0)
     return w.data_var
@@ -430,3 +433,30 @@ def set_titles_mpl(name, title=None, x=None, y=None):
     if y is not None:
         sdupy.unwrap(vis.axes(name)).set_ylabel(y)
     vis.widget(name).tight_layout()
+
+
+
+def pg_extent(widget, name, value=(0, 0, 1, 1)):
+    extent_xy = value[0], value[2]
+    extent_wh = value[1] - value[0], value[3] - value[2]
+    roi = pg.ROI(extent_xy, extent_wh)
+    vis.draw_pg(widget, name, [roi])
+    vis.pg_roi_add_8handles(roi)
+
+    v = sdupy.var(value)
+
+    def refr():
+        rect = roi.boundingRect().translated(roi.pos())
+        v.set((rect.left(), rect.right(), rect.top(), rect.bottom()))
+
+    roi.sigRegionChangeFinished.connect(refr)
+
+    # FIXME: add support for setting
+    # def set_roi_to_full_extent():
+    #     extent = round_extent(calc_extent(stitcher.homos, ref_image_hw))
+    #
+    #     from PyQt5.QtCore import QPointF
+    #     roi.setPos(QPointF(extent[0], extent[2]))
+    #     roi.setSize(QPointF(extent[1] - extent[0], extent[3] - extent[2]))
+
+    return v

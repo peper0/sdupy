@@ -1,5 +1,4 @@
 from typing import Union
-from urllib.parse import urlencode
 
 from sdupy import MainWindow
 

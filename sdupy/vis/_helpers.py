@@ -39,6 +39,8 @@ def image_to_mpl(image: np.ndarray, is_bgr=True):
 
 @reactive
 def pg_hold_items_unroll(pg_parent, items, zvalue=None):
+    if items is None:
+        items = []
     return pg_hold_items(pg_parent, *items, zvalue=zvalue)
 
 

@@ -1,4 +1,4 @@
-from typing import Sequence, Iterable
+from typing import Sequence, Iterable, Union, Sized
 
 from deprecation import deprecated
 
@@ -12,8 +12,7 @@ def dummy_checkpoint(progress, status=None):
 def with_progress(seq: Iterable, checkpoint: Checkpoint, size=None, status=None, div=1):
     checkpoint(0, status or '')
     if size is None:
-        if not isinstance(seq, Sequence):
-            seq = list(seq)
+        assert isinstance(seq, Sized), '`seq` must be a sequence unless `size` is given'
         size = len(seq)
 
     for i, e in enumerate(seq):
@@ -28,7 +27,7 @@ def with_progress(seq: Iterable, checkpoint: Checkpoint, size=None, status=None,
 def with_progress_sub(seq: Iterable, checkpoint: Checkpoint, size=None, status=None, statuses=None, status_pattern=None,
                       weights: Iterable[float] = None, div=1):
     if size is None:
-        seq = list(seq)
+        assert isinstance(seq, Sized), '`seq` must be a sequence unless `size` is given'
         size = len(seq)
 
     checkpoints = subcheckpoints(checkpoint, weights=weights, statuses=statuses, status_pattern=status_pattern,
@@ -47,7 +46,7 @@ def with_progress_sub(seq: Iterable, checkpoint: Checkpoint, size=None, status=N
 
 
 @deprecated("use with_progress()")
-def reporting_progress(seq: Sequence, checkpoint: Checkpoint, size=None, status=None, div=1):
+def reporting_progress(seq: Union[Sequence, Iterable], checkpoint: Checkpoint, size=None, status=None, div=1):
     size = size if size is not None else len(seq)
     if checkpoint is not None:
         checkpoint(0, status or '')

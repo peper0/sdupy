@@ -1,7 +1,7 @@
 from typing import Sequence, Union
 
 from sdupy import vis, unwrap, reactive_finalizable
-from sdupy.pyreactive.var import volatile
+from sdupy.pyreactive.var import volatile, var
 
 
 def link_pg_axes(slaves: Union[str, Sequence[str]], master: str, which={'x', 'y'}):
@@ -22,6 +22,8 @@ def link_pg_axes(slaves: Union[str, Sequence[str]], master: str, which={'x', 'y'
 def link_mpl_axes(axes: Union[str, Sequence[str]], which={'x', 'y'}):
     if isinstance(axes, str):
         axes = [axes]
+    if isinstance(which, str):
+        which = [which]
     master, *slaves = axes
     master_axes = unwrap(vis.axes(master))
     for slave in slaves:
@@ -42,7 +44,7 @@ def pg_roi_add_8handles(roi_item):
                 roi_item.addScaleHandle([x, y], [1 - x, 1 - y])
 
 
-def synced_vlines(axes: Union[str, Sequence[str]], x_var):
+def synced_vlines(axes: Union[str, Sequence[str]], x_var=var(), link_x_axes=True):
     def vline_and_click(axes):
         fig = unwrap(axes).figure
 
@@ -60,4 +62,5 @@ def synced_vlines(axes: Union[str, Sequence[str]], x_var):
         onclick_holder = volatile(add_onclick())
         return vline, onclick_holder
 
+    link_mpl_axes(axes, 'x')
     return [vline_and_click(vis.axes(a)) for a in axes]

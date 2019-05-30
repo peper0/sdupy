@@ -134,9 +134,10 @@ class Var(Wrapper, ConstForwarders, MutatingForwarders):
         self.set(other)
         return self
 
-    #Not sure whether we should simply forward it (see Const.__getattr__)
+    #(see Const.__getattr__)
+    @reactive
     def __getattr__(self, item):
-        return getattr(self._target().__inner__, item)
+        return getattr(self, item)
 
 
 
