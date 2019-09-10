@@ -1,2 +1,4 @@
 *.pyc
 cpp/CMakeFiles
+__pycache__
+*.egg-info

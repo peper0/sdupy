@@ -337,12 +337,12 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
     """
 
-    def __init__(self, async):
+    def __init__(self, async_):
         super().__init__()
-        self.async = async
+        self.async_ = async_
         self._ref = None
         self._dirty = False
-        if async:
+        if async_:
             # I have no idea how to call do lazy updating if update is async (and getter isn't)
             self._notifier = Notifier(self._update_async)
         else:
@@ -455,7 +455,7 @@ class HashableCallable:
 class ReactiveProxy(LazySwitchableProxy):
     def __init__(self, decorated: DecoratedFunction, args, kwargs):
         with ScopedName(name=decorated.callable.__name__):
-            super().__init__(async=iscoroutinefunction(self._update))
+            super().__init__(async_=iscoroutinefunction(self._update))
         self.decorated = decorated  # type: DecoratedFunction
 
         # use dep_only_args
