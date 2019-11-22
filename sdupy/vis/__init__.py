@@ -26,7 +26,6 @@ from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visi
 from sdupy.vis.globals import global_refs
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
 from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter
-from zebra.stitching.common import Extent
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
