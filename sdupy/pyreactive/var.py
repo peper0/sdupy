@@ -258,6 +258,7 @@ class VolatileProxy(Proxy):
         with ScopedName('volatile'):
             super().__init__(other_var)
         self._notifier.notify_func = self._trigger
+        self._trigger()
 
     def _trigger(self):
         with suppress(Exception):
