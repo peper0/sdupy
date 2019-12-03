@@ -6,6 +6,7 @@ import matplotlib.figure
 from PyQt5 import QtGui
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from matplotlib.axes import Axes
 from matplotlib.axis import Axis
 from matplotlib.backend_bases import MouseEvent, key_press_handler
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
@@ -18,7 +19,31 @@ matplotlib.rcParams.update({'font.size': 6})
 MODIFIER_KEYS = set(['shift', 'control', 'alt'])
 
 
-#FIXME: rename to MplFigure
+class Toolbar(NavigationToolbar):
+    def __init__(self, *args, **kwargs):
+        self.toolitems = super().toolitems + (
+            ('Clear', 'Clear the axes', 'clear', 'clear_axes'),
+            ('Autoscale', 'Autoscale the axes', 'autoscale', 'autoscale_axes'),
+        )
+        super().__init__(*args, **kwargs)
+
+    def clear_axes(self):
+        for a in self.canvas.figure.get_axes():
+            a.clear()
+        self.canvas.draw_idle()
+
+    def autoscale_axes(self):
+        print("autoscaling")
+        for a in self.canvas.figure.get_axes():  # type: Axes
+            prev_state = ['x'] if a.get_autoscalex_on() else [] + ['y'] if a.get_autoscaley_on() else []
+            a.autoscale(True)
+            a.autoscale(False)
+            a.autoscale(prev_state)
+        self.canvas.draw_idle()
+
+        print("ok")
+
+# FIXME: rename to MplFigure
 @register_widget("matplotlib figure")
 class Figure(QWidget):
     def __init__(self, parent, name):
@@ -33,11 +58,11 @@ class Figure(QWidget):
         self.canvas.setFocus()
         self.layout.addWidget(self.canvas)
 
-        self.mpl_toolbar = NavigationToolbar(self.canvas, self)
+        self.mpl_toolbar = Toolbar(self.canvas, self)
         self.layout.addWidget(self.mpl_toolbar)
 
         def sizeHint():
-            size = super(NavigationToolbar, self.mpl_toolbar).sizeHint()
+            size = super(Toolbar, self.mpl_toolbar).sizeHint()
             return size
 
         self.mpl_toolbar.sizeHint = sizeHint

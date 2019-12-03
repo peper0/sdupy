@@ -85,6 +85,11 @@ class ReactiveAxes(Wrapper):
     pcolormesh = plot_method(plt.Axes.pcolormesh)
     spy = plot_method(plt.Axes.spy)
 
+    # Plotting.Fields
+    quiver = plot_method(plt.Axes.quiver)
+    barbs = plot_method(plt.Axes.barbs)
+    streamplot = plot_method(plt.Axes.streamplot)
+
     # Plotting.Binned
     hexbin = plot_method(plt.Axes.hexbin)
     hist = plot_method(plt.Axes.hist, remove_func=remove_plot_hist)
