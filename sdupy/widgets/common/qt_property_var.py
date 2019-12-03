@@ -19,7 +19,7 @@ class QtSignaledVar(Wrapped, ConstForwarders, MutatingForwarders):
         self.obj.setProperty(self.prop_name, value)
 
     def get(self):
-        res= self.obj.property(self.prop_name)
+        res = self.obj.property(self.prop_name)
         return res
 
     def _target(self):
@@ -49,7 +49,7 @@ class QtPropertyVar(QtSignaledVar):
         notify_signal_name = bytes(notify_signal_meta.name()).decode('utf8')
         assert notify_signal_name, "property '{}' notifier has no name?!".format(prop_name)
         notify_signal = getattr(obj, notify_signal_name)
-        with ScopedName(obj.objectName()+'.'+prop_name):
+        with ScopedName(obj.objectName() + '.' + prop_name):
             super().__init__(notify_signal)
 
     def set(self, value):
