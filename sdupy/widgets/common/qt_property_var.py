@@ -59,6 +59,19 @@ class QtPropertyVar(QtSignaledVar):
         return self.obj.property(self.prop_name)
 
 
+class QtPropertyVar2(QtSignaledVar):
+    def __init__(self, notify_signal, getter, setter=None):
+        self.setter = setter
+        self.getter = getter
+        super().__init__(notify_signal)
+
+    def set(self, value):
+        self.setter(value)
+
+    def get(self):
+        return self.getter()
+
+
 class PgParamVar(QtSignaledVar):
     def __init__(self, line: pg.InfiniteLine):
         super().__init__(line.sigPositionChangeFinished)
