@@ -5,10 +5,10 @@ from inspect import iscoroutinefunction
 
 import pyqtgraph as pg
 from PyQt5.QtGui import QColor, QFont
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
-from pyqtgraph.widgets.DataFilterWidget import RangeFilterItem, EnumFilterItem
+from pyqtgraph.widgets.DataFilterWidget import EnumFilterItem
 
 from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
@@ -16,7 +16,7 @@ from . import register_widget
 
 
 class PgOneItem(pg.GraphicsView):
-    def __init__(self, parent, view):
+    def __init__(self, parent, view: pg.GraphicsWidget):
         super().__init__(parent)
         self.view = view
         self.setCentralItem(self.view)
@@ -49,11 +49,29 @@ class PgFigure(PgOneItem):
         super().__init__(parent, pg.PlotItem(lockAspect=True))
         self.view.setAspectLocked(True)
 
+    def dump_state(self):
+        return dict(
+            view_state=self.view.saveState(),
+        )
+
+    def load_state(self, state: dict):
+        if 'view_state' in state:
+            self.view.restoreState(state['view_state'])
+
 
 @register_widget("pyqtgraph plot")
 class PgPlot(PgOneItem):
     def __init__(self, parent, name):
         super().__init__(parent, pg.PlotItem())
+
+    def dump_state(self):
+        return dict(
+            view_state=self.view.saveState(),
+        )
+
+    def load_state(self, state: dict):
+        if 'view_state' in state:
+            self.view.restoreState(state['view_state'])
 
 
 def index_to_str(index):
