@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
-from progress_checkpoint.common import Checkpoint
 from sdupy import reactive
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
@@ -298,7 +297,7 @@ def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wr
 
 
 def task_in_paramtree(widget_name: str, param_path: Sequence[str],
-                      func: Callable[[Checkpoint], Any] = None, *,
+                      func: Callable[['Checkpoint'], Any] = None, *,
                       window=None):
     *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)

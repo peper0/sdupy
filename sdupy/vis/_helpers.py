@@ -136,7 +136,7 @@ def set_scatter_data_pg(widget: ScatterPlotWidget, data):
     def field_flags(name, ftype, values):
         if not issubclass(ftype, Number):
             return dict(mode='enum', values=list(values))
-        return dict(values=set(list(values)))
+        return dict(values=list(set(values)))
 
     if isinstance(data, Sequence) and len(data) > 0 and isinstance(data[0], Mapping):
         ftypes = OrderedDict()

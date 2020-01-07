@@ -45,6 +45,7 @@ class TriggerIfVisible(Proxy):
         self._notifier.notify_func = self._trigger
         self._other_var.__notifier__.add_observer(self._notifier)
         self.widget.visibilityChanged.connect(self._trigger)
+        self._trigger()
 
     def _is_visible(self):
         if hasattr(self.widget, 'visibleRegion2'):

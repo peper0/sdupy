@@ -200,14 +200,13 @@ class PgScatter(pg.ScatterPlotWidget):
                     points = self.scatterPlot.scatter.pointsAt(view_point)
                     text = ''
                     for p in points:
-                        for k, v in zip(self.fields.keys(), p.data()):
+                        for k, v in sorted(zip(self.fields.keys(), p.data())):
                             text += '{}: {}\n'.format(k, v)
                         text += '\n'
                     self.info_label.setText(text)
                     #print(text)
 
             self._show_cursor_proxy = pg.SignalProxy(plot_item.scene().sigMouseMoved, rateLimit=15, slot=mouseMoved)
-
 
             self.info_label.setVisible(True)
         else:

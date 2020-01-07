@@ -171,6 +171,7 @@ class ArrayTable(QWidget):
         self._setter = None
         self._set_current_val(np.array([[]]))
         self.visibilityChanged = parent.visibilityChanged  # FIXME:
+        self.update()
 
     @property
     def var(self):
