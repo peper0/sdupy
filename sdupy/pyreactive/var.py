@@ -504,15 +504,18 @@ class ReactiveProxy(LazySwitchableProxy):
         # - a coroutine (to be awaited),
         # - a generator to be run once and finalized before the next call
         # - an async generator
-        assert self._update_in_progress == False, 'circular dependency containing {}'.format(self.__notifier__.name)
+        # print(f"enter {self.__notifier__.name} {id(self)} prio={self.__notifier__.priority}")
+        # assert self._update_in_progress == False, 'circular dependency containing {}'.format(self.__notifier__.name)
         try:
-            self._update_in_progress = True
+            # self._update_in_progress = True
             args, kwargs = rewrap_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__.name)
             res = self.decorated.really_call(args, kwargs)
-            self._update_in_progress = False
+            # self._update_in_progress = False
+            # print(f"exit {self.__notifier__.name} {id(self)}")
             return res
         except Exception:
-            self._update_in_progress = False
+            # self._update_in_progress = False
+            # print(f"error {self.__notifier__.name} {id(self)}")
             raise
 
     @abstractmethod
