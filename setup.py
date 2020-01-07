@@ -3,11 +3,11 @@
 from setuptools import setup, find_packages
 
 setup(name='sdupy',
-      version='0.1',
+      version='0.2',
       description='SduPy Simple Declarative Ui for Python',
       author='Tomasz Łakota',
       author_email='tomasz@lakota.pl',
-      url='https://github.com/peper0/sdupy/tree/master',
+      url='https://github.com/peper0/sdupy',
       install_requires=[
 		'PyQt5',
 		'pyqtgraph',
