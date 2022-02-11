@@ -30,3 +30,6 @@ def none_if_error(v):
             return None
 
     return helper(v, v2=v)
+
+def pickn(iterable, n):
+    return (v for v, _ in zip(iterable, range(n)))

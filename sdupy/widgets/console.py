@@ -1,15 +1,10 @@
-import sip
-
-from .common.register import register_factory
-
-sip.setapi("QString", 2)
-sip.setapi("QVariant", 2)
-
+import matplotlib.pyplot as plt
+import numpy as np
 from IPython.lib import guisupport
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-import matplotlib.pyplot as plt
-import numpy as np
+
+from .common.register import register_factory
 
 
 class QIPythonWidget(RichJupyterWidget):

@@ -15,6 +15,7 @@ setup(name='sdupy',
 		'matplotlib',
 		'quamash',
 		'asyncio_extras',
+		'appdirs',
       ],
       packages=find_packages(),
       )
