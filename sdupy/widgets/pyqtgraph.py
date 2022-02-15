@@ -7,11 +7,11 @@ import pyqtgraph as pg
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
-from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+from pyqtgraph.parametertree.parameterTypes import StrParameterItem
 from pyqtgraph.widgets.DataFilterWidget import EnumFilterItem
-
 from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
+
 from . import register_widget
 
 
@@ -20,9 +20,9 @@ class PgOneItem(pg.GraphicsView):
         super().__init__(parent)
         self.view = view
         self.setCentralItem(self.view)
-        #FIXME: it's ugly hack but at least it's in one place and we don't break many code
-        #self.visibilityChanged = parent.visibilityChanged
-        #self.visibleRegion = parent.visibleRegion
+        # FIXME: it's ugly hack but at least it's in one place and we don't break many code
+        # self.visibilityChanged = parent.visibilityChanged
+        # self.visibleRegion = parent.visibleRegion
 
     def visibleRegion2(self):
         # in pg.GraphicsView it returns always empty region
@@ -37,6 +37,7 @@ class PgOneItem(pg.GraphicsView):
 class PgViewBox(PgOneItem):
     def __init__(self, parent, name):
         super().__init__(parent, pg.ViewBox(lockAspect=True))
+
 
 @register_widget("pyqtgraph layout")
 class PgLayout(pg.GraphicsLayoutWidget):
@@ -128,21 +129,21 @@ class PgImage(pg.ImageView):
                             index[self.axes['t']] = self.currentIndex
                         val = self.image[tuple(index)]
                         text += "    data[{}] = {}".format(index_to_str(index), val)
-                #self.cursor_pos_label.setText(text)
+                # self.cursor_pos_label.setText(text)
                 self.pos_label.setText(text)
                 # if all(isfinite(c) for c in [view_point.x(), view_point.y()]):
                 #     self.cursor_pos_label.setPos(view_point)
                 # else:
                 #     self.cursor_pos_label.setPos(QPointF(0, 0))
 
-            #self.cursor_pos_label = pg.TextItem(anchor=(0, 1))
-            #self.addItem(self.cursor_pos_label)
+            # self.cursor_pos_label = pg.TextItem(anchor=(0, 1))
+            # self.addItem(self.cursor_pos_label)
 
         self._show_cursor_proxy = pg.SignalProxy(self.scene.sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
     def dump_state(self):
         return dict(
-            #view_state=self.getView().getState(),
+            # view_state=self.getView().getState(),
             view_state=self.getView().saveState(),
             colormap=self.getHistogramWidget().gradient.saveState(),
             colormap_region=self.getHistogramWidget().region.getRegion()
@@ -150,7 +151,7 @@ class PgImage(pg.ImageView):
 
     def load_state(self, state: dict):
         if 'view_state' in state:
-            #self.getView().setState(state['view_state'])
+            # self.getView().setState(state['view_state'])
             self.getView().restoreState(state['view_state'])
         if 'colormap' in state:
             self.getHistogramWidget().gradient.restoreState(state['colormap'])
@@ -204,14 +205,13 @@ class PgScatter(pg.ScatterPlotWidget):
                             text += '{}: {}\n'.format(k, v)
                         text += '\n'
                     self.info_label.setText(text)
-                    #print(text)
+                    # print(text)
 
             self._show_cursor_proxy = pg.SignalProxy(plot_item.scene().sigMouseMoved, rateLimit=15, slot=mouseMoved)
 
             self.info_label.setVisible(True)
         else:
             self.info_label.setVisible(True)
-
 
     # def load_state(self, state: dict):
     #     self.state_to_load = state
@@ -238,9 +238,9 @@ class PgDataTree(pg.DataTreeWidget):
         return self.parentWidget().visibilityChanged
 
 
-class PathParameterItem(WidgetParameterItem):
+class PathParameterItem(StrParameterItem):
     def __init__(self, param, depth):
-        param.opts['type'] = 'str'
+        # param.opts['type'] = 'str'
         super().__init__(param, depth)
 
     def makeWidget(self):
@@ -253,19 +253,18 @@ class PathParameterItem(WidgetParameterItem):
         textbox = super().makeWidget()
         layout.addWidget(textbox)
         button = QPushButton('Browse...')
-        #button.setFixedWidth(20)
-        #button.setFixedHeight(20)
+        # button.setFixedWidth(20)
+        # button.setFixedHeight(20)
 
         layout.addWidget(button)
         button.clicked.connect(self.browse)
 
-        #widget.setMaximumHeight(20)  ## set to match height of spin box and line edit
+        # widget.setMaximumHeight(20)  ## set to match height of spin box and line edit
         widget.sigChanged = textbox.sigChanged
         widget.value = textbox.value
         widget.setValue = textbox.setValue
         self.widget = widget
         return widget
-
 
     @ignore_errors
     def browse(self, xx):
@@ -314,12 +313,11 @@ class TaskParameterItem(ParameterItem):
         self.layout.addWidget(self.progress_bar)
 
         self.layoutWidget.setLayout(self.layout)
-        #self.layout.addStretch()
-        #param.sigNameChanged.connect(self.paramRenamed)
-        #self.setText(0, '')
+        # self.layout.addStretch()
+        # param.sigNameChanged.connect(self.paramRenamed)
+        # self.setText(0, '')
         self.param.sigValueChanged.connect(self.refresh)
         self.refresh(param, None)
-
 
     @ignore_errors
     def treeWidgetChanged(self):
@@ -328,7 +326,7 @@ class TaskParameterItem(ParameterItem):
         if tree is None:
             return
 
-        #tree.setFirstItemColumnSpanned(self, True)
+        # tree.setFirstItemColumnSpanned(self, True)
         tree.setItemWidget(self, 1, self.layoutWidget)
 
     # def paramRenamed(self, param, name):
@@ -368,7 +366,7 @@ class TaskParameterItem(ParameterItem):
             self.start_stop_button.setText('start')
         else:
             self.progress_bar.setFormat('%p% {}'.format(status))
-            self.progress_bar.setValue(progress*1000)
+            self.progress_bar.setValue(progress * 1000)
             self.start_stop_button.setText('cancel')
 
 
@@ -383,10 +381,9 @@ class TaskParameter(Parameter):
         self.task = None  # type: asyncio.Task
         self.progress = None  # type: float
         self.status = None  # type: str
-        #self.progress_param = self.addChild(dict(name="progress", type='float', readonly=True, value=0))
-        #self.state_param = self.addChild(dict(name="state", type='str', readonly=True, value=0))
-        #self.result_param = self.addChild(dict(name="result", type='text', readonly=True))
-
+        # self.progress_param = self.addChild(dict(name="progress", type='float', readonly=True, value=0))
+        # self.state_param = self.addChild(dict(name="state", type='str', readonly=True, value=0))
+        # self.result_param = self.addChild(dict(name="result", type='text', readonly=True))
 
     @ignore_errors
     def start_or_stop(self):
@@ -413,7 +410,7 @@ class TaskParameter(Parameter):
 
     async def checkpoint(self, progress, status=None):
         if status != self.status or abs(progress - self.progress) >= 0.01:
-            print("{:14.3f} {:5.1f}% {}".format(time.time(), progress*100, status))
+            print("{:14.3f} {:5.1f}% {}".format(time.time(), progress * 100, status))
         self.progress = progress
         self.status = status
         self.sigValueChanged.emit(self, None)
@@ -426,7 +423,7 @@ class ActionParameterItem(ParameterItem):
 
         self.execute_button = QPushButton()
         self.execute_button.setFixedHeight(20)
-        #self.execute_button.setFixedWidth(48)
+        # self.execute_button.setFixedWidth(48)
         self.execute_button.clicked.connect(self.buttonClicked)
         self.execute_button.setText(param.name())
 

@@ -2,7 +2,7 @@ import asyncio
 import sys
 import signal
 
-import quamash
+import qasync
 from PyQt5 import QtCore
 
 # Some magic from https://stackoverflow.com/questions/5160577/ctrl-c-doesnt-work-with-pyqt
@@ -11,7 +11,7 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 loop = None
 
 
-class QEventLoop(quamash.QEventLoop):
+class QEventLoop(qasync.QEventLoop):
     def run_for(self, max_time):
         """Run eventloop forever."""
         self.__is_running = True
