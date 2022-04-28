@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='sdupy',
-      version='0.4',
+      version='0.5',
       description='SduPy Simple Declarative Ui for Python',
       author='Tomasz Łakota',
       author_email='tomasz@lakota.pl',
@@ -15,7 +15,7 @@ setup(name='sdupy',
 		'matplotlib>=3.5',
         'qasync',
 		'asyncio_extras',
-		'appdirs',
+		'appdirs'
       ],
       packages=find_packages(),
       )
