@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='sdupy',
-      version='0.5',
+      version='0.6',
       description='SduPy Simple Declarative Ui for Python',
       author='Tomasz Łakota',
       author_email='tomasz@lakota.pl',

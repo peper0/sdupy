@@ -1,10 +1,11 @@
 from numbers import Number, Integral
 from typing import Mapping, Sequence
 from builtins import isinstance
+from collections import OrderedDict
 
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from pyqtgraph import ImageItem, GraphItem, PlotItem, ScatterPlotWidget, OrderedDict
+from pyqtgraph import ImageItem, GraphItem, PlotItem, ScatterPlotWidget
 
 from sdupy.pyreactive import reactive, reactive_finalizable
 
