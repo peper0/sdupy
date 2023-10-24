@@ -1,6 +1,11 @@
+-e .
 PyQt5
 pyqtgraph
 numpy
 matplotlib
 quamash
 asyncio_extras
+imageio
+ipython
+jupyter
+ndimage

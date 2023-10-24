@@ -9,9 +9,9 @@ from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPus
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import StrParameterItem
 from pyqtgraph.widgets.DataFilterWidget import EnumFilterItem
+
 from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
-
 from . import register_widget
 
 
@@ -366,7 +366,7 @@ class TaskParameterItem(ParameterItem):
             self.start_stop_button.setText('start')
         else:
             self.progress_bar.setFormat('%p% {}'.format(status))
-            self.progress_bar.setValue(progress * 1000)
+            self.progress_bar.setValue(int(progress * 1000))
             self.start_stop_button.setText('cancel')
 
 
