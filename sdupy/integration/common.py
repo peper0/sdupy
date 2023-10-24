@@ -31,6 +31,7 @@ def init_quamash():
     if loop is None:
         loop = QEventLoop()
         asyncio.set_event_loop(loop)  # NEW must set the event loop
+    return loop
 
 
 asyncio_is_working = False

@@ -1,12 +1,19 @@
-
 try:
     from . import pydev_ipython  # workaround for importing it here fix the problem with matplotlib?
+
 except:
     pass
 
 
 def get_module():
     global install, run_mainloop
+
+    import asyncio
+    if asyncio.get_running_loop() is not None:
+        print("running asyncio event loop detected")
+        from . import asyncio
+        return asyncio
+
     ipython = None
 
     try:
@@ -14,8 +21,7 @@ def get_module():
     except Exception:
         pass
 
-
-    #print("ipython", ipython)
+    # print("ipython", ipython)
     if ipython is not None:
         if ipython.__class__.__name__ == 'PyDevTerminalInteractiveShell':
             print("pydev_ipython detected")
@@ -42,4 +48,3 @@ def run_mainloop():
 
 
 __all__ = ['install', 'run_mainloop']
-
