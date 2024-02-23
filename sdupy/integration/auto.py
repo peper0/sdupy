@@ -9,7 +9,12 @@ def get_module():
     global install, run_mainloop
 
     import asyncio
-    if asyncio.get_running_loop() is not None:
+
+    try:
+        running_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_loop = None
+    if running_loop is not None:
         print("running asyncio event loop detected")
         from . import asyncio
         return asyncio
