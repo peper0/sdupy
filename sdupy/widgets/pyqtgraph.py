@@ -4,8 +4,12 @@ import time
 from inspect import iscoroutinefunction
 
 import pyqtgraph as pg
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QFont
-from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget, \
+    QApplication
+from pyqtgraph import ItemSample
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import StrParameterItem
 from pyqtgraph.widgets.DataFilterWidget import EnumFilterItem
@@ -60,10 +64,30 @@ class PgFigure(PgOneItem):
             self.view.restoreState(state['view_state'])
 
 
+class PlotViewBox(pg.ViewBox):
+    doubleClicked = QtCore.pyqtSignal(object)
+
+    def wheelEvent(self, ev, axis=None):
+        # zoom only horizontoally if Shift is pressed and vertically if Ctrl is pressed
+        if axis is None:
+            modifiers = QApplication.keyboardModifiers()
+            if modifiers == Qt.ControlModifier:
+                axis = 1
+            elif modifiers == Qt.ShiftModifier:
+                axis = 0
+
+        super().wheelEvent(ev, axis)
+
+    def mouseDoubleClickEvent(self, ev):
+        super().mouseDoubleClickEvent(ev)
+        self.doubleClicked.emit(ev)
+
 @register_widget("pyqtgraph plot")
 class PgPlot(PgOneItem):
     def __init__(self, parent, name):
-        super().__init__(parent, pg.PlotItem())
+        vb = PlotViewBox(None)
+        super().__init__(parent, pg.PlotItem(viewBox=vb))
+
 
     def dump_state(self):
         return dict(
@@ -477,3 +501,17 @@ class PgParamTree(QWidget):
             paramtree_load_params(self.param_tree, state['params'])
 
         pass
+
+
+class LegendItemSample(ItemSample):
+    SYMBOL = 's'
+    SYMBOL_SIZE = 3
+    def mouseClickEvent(self, event):
+        """Use the mouseClick event to toggle the visibility of the plotItem
+        """
+        if event.button() == QtCore.Qt.MouseButton.MiddleButton:
+            self.item.setSymbolSize(self.SYMBOL_SIZE)
+            new_symbol = None if self.item.opts['symbol'] else self.SYMBOL
+            self.item.setSymbol(new_symbol)
+
+        super().mouseClickEvent(event)

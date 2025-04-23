@@ -44,7 +44,10 @@ class TriggerIfVisible(Proxy):
         self.widget = widget
         self._notifier.notify_func = self._trigger
         self._other_var.__notifier__.add_observer(self._notifier)
-        self.widget.visibilityChanged.connect(self._trigger)
+        if hasattr(self.widget, 'visibilityChanged'):
+            self.widget.visibilityChanged.connect(self._trigger)
+        else:
+            logging.warning(f'widget {self.widget.objectName()} of type {self.widget.__class__.__name__} does not have visibilityChanged signal')
         self._trigger()
 
     def _is_visible(self):

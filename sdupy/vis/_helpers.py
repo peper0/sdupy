@@ -121,7 +121,6 @@ def make_graph_item_pg(pos, adj, **kwargs):
 def make_plot_item_pg(plot_item: PlotItem, *args, **kwargs):
     item = plot_item.plot(*args, **kwargs)
     yield item
-
     plot_item.removeItem(item)
 
 

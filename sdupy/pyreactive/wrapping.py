@@ -6,7 +6,7 @@ from .notifier import Notifier, ScopedName
 
 
 def get_subnotifier(self: Notifier, name: str) -> Notifier:
-    if name is None or name is '':
+    if name is None or name == '':
         return self.__notifier__
     if not hasattr(self, '_subnotifiers'):
         setattr(self, '_subnotifiers', dict())

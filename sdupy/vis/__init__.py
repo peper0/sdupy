@@ -9,6 +9,7 @@ from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget, QMenu, QAction, QMenuBar
 from PyQt5.QtWidgets import QTreeWidgetItem
+from pyqtgraph import ItemSample
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
@@ -22,9 +23,9 @@ from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg, \
     pg_hold_items_unroll
 from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
-from sdupy.vis.globals import global_refs
+from sdupy.vis.globals import global_refs, store_global_ref
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
-from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter
+from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter, LegendItemSample
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
 from sdupy.widgets.tables import ArrayTable
@@ -145,10 +146,18 @@ def graph_pg(widget_name: str, pos, adj, window=None, label=None, zvalue=None, *
 graph = graph_pg
 
 
+
+
 def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     w = widget(widget_name, PgPlot, window=window)
-    global_refs[(w, label)] = trigger_if_visible(make_plot_item_pg(w.view, *args, **kwargs), w)
-    return global_refs[(w, label)]
+    if label and "name" not in kwargs:
+        w.view.addLegend(sampleType=LegendItemSample)
+        kwargs["name"] = label
+
+    plot_item = make_plot_item_pg(w.view, *args, **kwargs)
+    r = trigger_if_visible(plot_item, w)
+    store_global_ref((w, label), r)
+    return r
 
 
 def scatter_pg(widget_name: str, data, label=None, window=None):
@@ -458,3 +467,31 @@ def pg_extent(widget, name, value=(0, 0, 1, 1)):
     #     roi.setSize(QPointF(extent[1] - extent[0], extent[3] - extent[2]))
 
     return v
+
+def pg_vline(widget, name, var=0, eager=False, **kwargs):
+    line = pg.InfiniteLine(angle=90, **kwargs)
+    vis.draw_pg(widget, name, [line])
+    # vis.pg_roi_add_8handles(roi)
+
+    from sdupy.pyreactive import Var
+    if not isinstance(var, Var):
+        var = sdupy.var(var)
+
+    def refr():
+        x, _ = line.pos()
+        if x != var.__inner__:
+            var.set(x)
+
+    if eager:
+        line.sigPositionChanged.connect(refr)
+    else:
+        line.sigPositionChangeFinished.connect(refr)
+
+    @reactive
+    def set_to_var(x):
+        if x != line.pos()[0]:
+            line.setPos(x)
+
+    vis.global_refs[(vis.widget(widget), name + "__setter")] = vis.trigger_if_visible(set_to_var(var),
+                                                                                      vis.widget(widget))
+    return var

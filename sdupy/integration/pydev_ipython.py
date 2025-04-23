@@ -38,7 +38,7 @@ def install():
         app = QApplication(['sdupy'])
     init_quamash()
     set_inputhook(asyncio_inputhook)
-    test_asyncio()
+    # test_asyncio()
 
 
 def run_mainloop():
