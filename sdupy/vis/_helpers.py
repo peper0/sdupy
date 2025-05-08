@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import numpy as np
 from PyQt5.QtCore import QRectF, QPointF
-from pyqtgraph import ImageItem, GraphItem, PlotItem, ScatterPlotWidget
+from pyqtgraph import ImageItem, GraphItem, PlotItem, ScatterPlotWidget, BarGraphItem
 
 from sdupy.pyreactive import reactive, reactive_finalizable
 
@@ -120,6 +120,29 @@ def make_graph_item_pg(pos, adj, **kwargs):
 @reactive_finalizable
 def make_plot_item_pg(plot_item: PlotItem, *args, **kwargs):
     item = plot_item.plot(*args, **kwargs)
+    yield item
+    plot_item.removeItem(item)
+
+
+@reactive_finalizable
+def make_bargraph_item_pg(plot_item: PlotItem, *args, **kwargs):
+    item = BarGraphItem(**kwargs)
+    plot_item.addItem(item)
+    yield item
+    plot_item.removeItem(item)
+
+
+@reactive_finalizable
+def make_histogram_item_pg(plot_item: PlotItem, *args, **kwargs):
+    BAR_GRAPH_KEYS = ("pen", "brush")
+    bar_graph_args = {}
+    for key in BAR_GRAPH_KEYS:
+        if key in kwargs:
+            bar_graph_args[key] = kwargs.pop(key)
+    y, x = np.histogram(*args, **kwargs)
+    width = x[1:] - x[:-1]
+    item = BarGraphItem(x=x[:-1], height=y, width=width, **bar_graph_args)
+    plot_item.addItem(item)
     yield item
     plot_item.removeItem(item)
 

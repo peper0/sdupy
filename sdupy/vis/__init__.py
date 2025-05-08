@@ -13,7 +13,6 @@ from pyqtgraph import ItemSample
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
-from sdupy import reactive
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
@@ -21,7 +20,7 @@ from sdupy.pyreactive.var import volatile
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg, \
-    pg_hold_items_unroll
+    pg_hold_items_unroll, make_histogram_item_pg, make_bargraph_item_pg
 from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs, store_global_ref
 from sdupy.widgets.common.qt_property_var import QtSignaledVar
@@ -159,6 +158,19 @@ def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     store_global_ref((w, label), r)
     return r
 
+def histogram_pg(widget_name: str, *args, label=None, window=None, **kwargs):
+    w = widget(widget_name, PgPlot, window=window)
+    plot_item = make_histogram_item_pg(w.view, *args, **kwargs)
+    r = trigger_if_visible(plot_item, w)
+    store_global_ref((w, label), r)
+    return r
+
+def bargraph_pg(widget_name: str, *args, label=None, window=None, **kwargs):
+    w = widget(widget_name, PgPlot, window=window)
+    plot_item = make_bargraph_item_pg(w.view, *args, **kwargs)
+    r = trigger_if_visible(plot_item, w)
+    store_global_ref((w, label), r)
+    return r
 
 def scatter_pg(widget_name: str, data, label=None, window=None):
     w = widget(widget_name, PgScatter, window=window)
