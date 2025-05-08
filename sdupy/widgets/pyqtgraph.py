@@ -87,6 +87,7 @@ class PgPlot(PgOneItem):
     def __init__(self, parent, name):
         vb = PlotViewBox(None)
         super().__init__(parent, pg.PlotItem(viewBox=vb))
+        self.view.showGrid(x=True, y=True)
 
 
     def dump_state(self):
