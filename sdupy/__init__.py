@@ -8,7 +8,7 @@ from .main_window import MainWindow
 #    imshow, \
 #    var_from_table
 from .pyreactive import var, const, reactive, reactive_finalizable, unwrap
-from .windows import window
+from .windows import window, window_as_current
 
 # fixme: ability to disable this
 install_mainloop()

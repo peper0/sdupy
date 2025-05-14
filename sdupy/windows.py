@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Union
 
 from sdupy import MainWindow
@@ -48,3 +49,16 @@ def window(name: WindowSpec = None, default_state_dir=None):
 
     current_main_window = window
     return window
+
+@contextmanager
+def window_as_current(name: WindowSpec = None):
+    """
+    Context manager that sets the window as current and restores the previous one after exiting the context.
+    """
+    global current_main_window
+    previous_window = current_main_window
+    try:
+        window(name)
+        yield current_main_window
+    finally:
+        current_main_window = previous_window
