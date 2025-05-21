@@ -1,15 +1,13 @@
 import gc
 from functools import wraps
-from typing import Any, List, Tuple, Union, Sequence, Optional, Callable, Coroutine
+from typing import Any, List, Tuple, Optional, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pyqtgraph as pg
 from PyQt5.QtCore import QRectF, QPointF
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget, QMenu, QAction, QMenuBar
-from PyQt5.QtWidgets import QTreeWidgetItem
-from pyqtgraph import ItemSample
+from PyQt5.QtWidgets import QGraphicsItem, QDockWidget, QWidget, QMenu, QAction, QMenuBar, QTreeWidgetItem
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 import sdupy
@@ -21,14 +19,14 @@ from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg, \
     pg_hold_items_unroll, make_histogram_item_pg, make_bargraph_item_pg
-from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
 from sdupy.vis.globals import global_refs, store_global_ref
-from sdupy.widgets.common.qt_property_var import QtSignaledVar
-from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter, LegendItemSample
-from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from sdupy.widgets import Figure, Slider, VarsTable, CheckBox, ComboBox
+from sdupy.widgets.common.qt_property_var import QtSignaledVar
+from sdupy.widgets.helpers import paramtree_get_root_parameters, trigger_if_visible
+from sdupy.widgets.pyqtgraph import PgPlot, PgParamTree, TaskParameter, PgScatter, ActionParameter, LegendItemSample
 from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
+from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from .utils import *
 
 Place = str

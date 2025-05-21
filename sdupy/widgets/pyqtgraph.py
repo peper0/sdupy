@@ -561,6 +561,7 @@ class PgParamTree(QWidget):
 class LegendItemSample(ItemSample):
     SYMBOL = 's'
     SYMBOL_SIZE = 3
+
     def mouseClickEvent(self, event):
         """Use the mouseClick event to toggle the visibility of the plotItem
         """
