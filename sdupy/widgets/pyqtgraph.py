@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+import weakref
 from inspect import iscoroutinefunction
 
 import pyqtgraph as pg
@@ -8,7 +9,7 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget, \
-    QApplication
+    QApplication, QTreeWidgetItem
 from pyqtgraph import ItemSample
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.parameterTypes import StrParameterItem
@@ -85,10 +86,10 @@ class PlotViewBox(pg.ViewBox):
 @register_widget("pyqtgraph plot")
 class PgPlot(PgOneItem):
     def __init__(self, parent, name):
-        vb = PlotViewBox(None)
+        vb = PlotViewBox(None, name=name)
+        self.view: pg.PlotItem
         super().__init__(parent, pg.PlotItem(viewBox=vb))
         self.view.showGrid(x=True, y=True)
-
 
     def dump_state(self):
         return dict(
@@ -97,7 +98,18 @@ class PgPlot(PgOneItem):
 
     def load_state(self, state: dict):
         if 'view_state' in state:
-            self.view.restoreState(state['view_state'])
+            # preserve current linked views that was set programmatically
+            view_state = state['view_state']
+            linked_views = self.view.vb.state['linkedViews']
+            linked_views = [i() if isinstance(i, weakref.ref) else i for i in linked_views]
+
+            self.view.restoreState(view_state)
+
+            if linked_views[0]:
+                self.view.setXLink(linked_views[0])
+            if linked_views[1]:
+                self.view.setYLink(linked_views[1])
+
 
 
 def index_to_str(index):
