@@ -274,6 +274,48 @@ class PgDataTree(pg.DataTreeWidget):
     def visibilityChanged(self):
         return self.parentWidget().visibilityChanged
 
+    @staticmethod
+    def get_item_path(item: QTreeWidgetItem) -> str:
+        res = []
+        while isinstance(item, QTreeWidgetItem):
+            res.append(item.text(0))
+            item = item.parent()
+        return "__".join(reversed(res))
+
+    def setData(self, data, hideRoot=True):
+        state = self.dump_state()
+        super().setData(data, hideRoot=hideRoot)
+        self.load_state(state)
+
+    def dump_state(self):
+        return dict(
+            geometry=bytes(self.saveGeometry()).hex(),
+            expanded={self.get_item_path(i): i.isExpanded() for i in
+                              self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive)},
+        )
+
+
+    def load_state(self, state: dict):
+        if 'geometry' in state:
+            self.restoreGeometry(bytes.fromhex(state['geometry']))
+        expaned = state.get('expanded', {})
+        for i in self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive):
+            path = self.get_item_path(i)
+            if path in expaned:
+                i.setExpanded(expaned[path])
+            else:
+                i.setExpanded(False)
+
+
+@register_widget("pyqtgraph tree")
+class PgTreeView(pg.TreeWidget):
+    def __init__(self, parent, name):
+        super().__init__(parent)
+
+    @property
+    def visibilityChanged(self):
+        return self.parentWidget().visibilityChanged
+
 
 class PathParameterItem(StrParameterItem):
     def __init__(self, param, depth):
