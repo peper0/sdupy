@@ -16,7 +16,7 @@ import sdupy
 from sdupy.pyreactive import Var, Wrapped
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.notifier import ScopedName
-from sdupy.pyreactive.var import volatile
+from sdupy.pyreactive.utils import bind_vars
 from sdupy.pyreactive.wrappers.axes import ReactiveAxes
 from sdupy.utils import ignore_errors
 from sdupy.vis._helpers import make_graph_item_pg, set_zvalue, make_plot_item_pg, set_scatter_data_pg, \
@@ -320,11 +320,11 @@ class PgParamVar(QtSignaledVar):
 def var_in_paramtree(place: Place, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):
     param_in_paramtree(place, param_path, param, window=window)
 
+    pg_param_var = PgParamVar(param)
     if var is None:
-        var = PgParamVar(param)
+        var = pg_param_var
     else:
-        # TODO: bind current parameter with a PgParamVar
-        raise NotImplementedError()
+        store_global_ref((place, tuple(param_path)), bind_vars(var, pg_param_var))
 
     return var
 
