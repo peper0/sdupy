@@ -31,14 +31,26 @@ from sdupy.widgets.tables import ArrayTable
 from sdupy.windows import WindowSpec
 from .utils import *
 
+Place = str
+"""
+A placement of a widget.
+* `str` - a name of a widget in the current window
+* `QWidget` - a specific widget
+* more may be added in the future, e.g. a pair of window and widget
 
-def widget_and_dock(name: str, factory=None, window: WindowSpec = None):
-    assert isinstance(name, str)
+"""
+
+def widget_and_dock(name: str, factory=None, window: WindowSpec = None) -> (QWidget, QDockWidget):
+    isinstance(name, str)
     return sdupy.window(window).obtain_widget(name, factory)
 
-
-def widget(name: str, factory=None, window: WindowSpec = None) -> QWidget:
-    return widget_and_dock(name, factory, window)[0]
+def widget(place: Place, factory=None, window: WindowSpec = None) -> QWidget:
+    if isinstance(place, QWidget):
+        return place
+    elif isinstance(place, str):
+        return widget_and_dock(place, factory, window)[0]
+    else:
+        raise TypeError("place should be str or QWidget, got {}".format(type(place)))
 
 
 def dock_widget(name: str, factory=None, window: WindowSpec = None) -> QDockWidget:
@@ -46,14 +58,14 @@ def dock_widget(name: str, factory=None, window: WindowSpec = None) -> QDockWidg
 
 
 # TODO: add option for name=None that returns the last axes used or the new one (if none was used yet)
-def mpl_axes(name: str, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Axes]:
-    return ReactiveAxes(widget(name, Figure, window=window).axes)
+def mpl_axes(place: Place, window: WindowSpec = None) -> Union[ReactiveAxes, plt.Axes]:
+    return ReactiveAxes(widget(place, Figure, window=window).axes)
 
 
 axes = mpl_axes
 
 
-def image_mpl(widget_name: str, image: Wrapped[np.ndarray], is_bgr=True, window=None, **kwargs):
+def image_mpl(place: Place, image: Wrapped[np.ndarray], is_bgr=True, window=None, **kwargs):
     """
     :param name: Unique identifier among all widgets. If such widget doesn't exist, it will be created.
     :param image: Any image that matplotlib can plot with imshow.
@@ -61,8 +73,8 @@ def image_mpl(widget_name: str, image: Wrapped[np.ndarray], is_bgr=True, window=
                     otherwise)
     :return:
     """
-    ax = mpl_axes(name=widget_name, window=window)
-    w = widget(name=widget_name, window=window)
+    ax = mpl_axes(place=place, window=window)
+    w = widget(place=place, window=window)
     image_name = kwargs.get('label')
     i = ax.imshow(image_to_mpl(image, is_bgr), **kwargs)
     global_refs[(ax.__inner__, image_name)] = trigger_if_visible(i, ax.__inner__.get_figure().canvas.parentWidget())
@@ -72,8 +84,8 @@ def image_mpl(widget_name: str, image: Wrapped[np.ndarray], is_bgr=True, window=
 imshow = image_mpl
 
 
-def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
-    ax = mpl_axes(name=widget_name, window=window)
+def plot_mpl(widget_name: Place, *args, plot_fn='plot', window=None, **kwargs):
+    ax = mpl_axes(place=widget_name, window=window)
     plot_name = kwargs.get('label')
     plot = getattr(ax, plot_fn)
     global_refs[(ax.__inner__, plot_name)] = trigger_if_visible(plot(*args, **kwargs),
@@ -84,22 +96,22 @@ def plot_mpl(widget_name: str, *args, plot_fn='plot', window=None, **kwargs):
         ax.legend()
 
 
-def draw_pg(widget_name: str, label, items: Sequence[Wrapped[QGraphicsItem]], zvalue=None, window=None):
+def draw_pg(place: Place, label, items: Sequence[Wrapped[QGraphicsItem] | QGraphicsItem], zvalue=None, window=None):
     from sdupy.widgets.pyqtgraph import PgFigure
-    w = widget(widget_name, PgFigure, window=window)
+    w = widget(place, PgFigure, window=window)
     global_refs[(w, label)] = trigger_if_visible(pg_hold_items_unroll(w.view, items, zvalue=zvalue), w)
 
 
-def image_pg(widget_name: str, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
-    with ScopedName(name=widget_name+('.'+label if label else '')):
+def image_pg(place: Place, image: Optional[np.ndarray], window=None, label=None, zvalue=None, **kwargs):
+    with ScopedName(name=place+('.'+label if label else '')):
         items = [make_pg_image_item(image, **kwargs)]
-        draw_pg(widget_name, ('__image__', label), items, zvalue=zvalue, window=window)
+        draw_pg(place, ('__image__', label), items, zvalue=zvalue, window=window)
 
 
-def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, **kwargs):
+def image_pg_adv(place: Place, image: np.ndarray, window=None, extent=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PgImage
 
-    w = widget(widget_name, PgImage, window=window)
+    w = widget(place, PgImage, window=window)
 
     @reactive
     def set_image(image: np.ndarray, extent=None, **kwargs):
@@ -131,14 +143,14 @@ def image_pg_adv(widget_name: str, image: np.ndarray, window=None, extent=None, 
     global_refs[(w, '__image__')] = trigger_if_visible(set_image(image, extent, **kwargs), w)
 
 
-def image_slice_pg_adv(widget_name: str, image: np.ndarray, window=None, **kwargs):
-    return image_pg_adv(widget_name, image, window, axes=dict(t=0, y=1, x=2), **kwargs)
+def image_slice_pg_adv(place: Place, image: np.ndarray, window=None, **kwargs):
+    return image_pg_adv(place, image, window, axes=dict(t=0, y=1, x=2), **kwargs)
 
 
-def graph_pg(widget_name: str, pos, adj, window=None, label=None, zvalue=None, **kwargs):
+def graph_pg(place: Place, pos, adj, window=None, label=None, zvalue=None, **kwargs):
     print("image_pg")
     items = [make_graph_item_pg(pos, adj, **kwargs)]
-    draw_pg(widget_name, ('__graph__', label), items, window=window, zvalue=zvalue)
+    draw_pg(place, ('__graph__', label), items, window=window, zvalue=zvalue)
     return items[0]
 
 
@@ -147,8 +159,8 @@ graph = graph_pg
 
 
 
-def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
-    w = widget(widget_name, PgPlot, window=window)
+def plot_pg(place: Place, *args, label=None, window=None, **kwargs):
+    w = widget(place, PgPlot, window=window)
     if label and "name" not in kwargs:
         w.view.addLegend(sampleType=LegendItemSample)
         kwargs["name"] = label
@@ -158,44 +170,44 @@ def plot_pg(widget_name: str, *args, label=None, window=None, **kwargs):
     store_global_ref((w, label), r)
     return r
 
-def histogram_pg(widget_name: str, *args, label=None, window=None, **kwargs):
-    w = widget(widget_name, PgPlot, window=window)
+def histogram_pg(place: Place, *args, label=None, window=None, **kwargs):
+    w = widget(place, PgPlot, window=window)
     plot_item = make_histogram_item_pg(w.view, *args, **kwargs)
     r = trigger_if_visible(plot_item, w)
     store_global_ref((w, label), r)
     return r
 
-def bargraph_pg(widget_name: str, *args, label=None, window=None, **kwargs):
-    w = widget(widget_name, PgPlot, window=window)
+def bargraph_pg(place: Place, *args, label=None, window=None, **kwargs):
+    w = widget(place, PgPlot, window=window)
     plot_item = make_bargraph_item_pg(w.view, *args, **kwargs)
     r = trigger_if_visible(plot_item, w)
     store_global_ref((w, label), r)
     return r
 
-def scatter_pg(widget_name: str, data, label=None, window=None):
-    w = widget(widget_name, PgScatter, window=window)
+def scatter_pg(place: Place, data, label=None, window=None):
+    w = widget(place, PgScatter, window=window)
     global_refs[(w, label)] = trigger_if_visible(set_scatter_data_pg(w, data), w)
     return global_refs[(w, label)]
 
 
-def data_tree_pg(widget_name: str, tree, window=None, **kwargs):
+def data_tree_pg(place: Place, tree, window=None, **kwargs):
     from sdupy.widgets.pyqtgraph import PgDataTree
-    w = widget(widget_name, PgDataTree, window=window)
-
+    w = widget(place, PgDataTree, window=window)
+    assert isinstance(w, PgDataTree)
     global_refs[(w)] = trigger_if_visible(reactive(w.setData)(tree), w)
 
 
 data_tree = data_tree_pg
 
 
-def clear_variables(widget_name: str):
-    vars_table = widget(widget_name, VarsTable)
+def clear_variables(place: Place):
+    vars_table = widget(place, VarsTable)
     vars_table.clear()
 
 
-def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, value=None, window=None):
+def slider(place: Place, var: Wrapped=None, *, min=0, max=1, step=1, value=None, window=None):
 
-    w = widget(widget_name, Slider, window)
+    w = widget(place, Slider, window)
     if var is not None:
         w.var = var
     global_refs[(w, 'set_params')] = volatile(reactive(w.set_params)(min, max, step))
@@ -204,31 +216,31 @@ def slider(widget_name: str, var: Wrapped=None, *, min=0, max=1, step=1, value=N
     return w.var
 
 
-def combo(widget_name: str, *, choices: List[Union[Any, Tuple[str, Any]]], window=None):
-    w = widget(widget_name, ComboBox, window)
+def combo(place: Place, *, choices: List[Union[Any, Tuple[str, Any]]], window=None):
+    w = widget(place, ComboBox, window)
     global_refs[(w, 'set_choices')] = volatile(reactive(w.set_choices)(choices))
     # if widget.combo.currentIndex() < 0:
     #     widget.combo.setCurrentIndex(0)
     return w.data_var
 
 
-def checkbox(widget_name: str, var: Wrapped=None, *, window=None):
-    w = widget(widget_name, CheckBox, window)
+def checkbox(place: Place, var: Wrapped=None, *, window=None):
+    w = widget(place, CheckBox, window)
     if var is not None:
         w.var = var
     return w.var
 
 
-def var_in_table(widget_name: str, var_name: str, var: Wrapped, *, to_value=eval, window=None):
-    assert isinstance(widget_name, str)
+def var_in_table(place: Place, var_name: str, var: Wrapped, *, to_value=eval, window=None):
+    assert isinstance(place, str)
     var = var if var is not None else Var()  # fixme: check if there is already such a var
-    vars_table = widget(widget_name, VarsTable, window)
+    vars_table = widget(place, VarsTable, window)
     vars_table.insert_var(var_name, var, to_value=to_value)
     return var
 
 
-def array_table(widget_name: str, var: Wrapped=None, *, format:str=None, window=None):
-    w = widget(widget_name, ArrayTable, window)
+def array_table(place: Place, var: Wrapped=None, *, format:str=None, window=None):
+    w = widget(place, ArrayTable, window)
     if var is None:
         var = sdupy.var(np.zeros((2, 3)))  # fixme
     w.var = var
@@ -269,15 +281,15 @@ def _paramtree_add_child(parent, param):
     raise Exception("parent has type {}".format(type(parent)))
 
 
-def param_in_paramtree(widget_name: str, param_path: Sequence[str], param, *, window=None):
-    parent = group_in_paramtree(widget_name, param_path, window)
+def param_in_paramtree(place: Place, param_path: Sequence[str], param, *, window=None):
+    parent = group_in_paramtree(place, param_path, window)
 
     _paramtree_add_child(parent, param)
 
 
-def group_in_paramtree(widget_name, param_path, window=None):
-    assert isinstance(widget_name, str)
-    param_tree = widget(widget_name, PgParamTree, window).param_tree  # type: ParameterTree
+def group_in_paramtree(place, param_path, window=None):
+    assert isinstance(place, Place)
+    param_tree = widget(place, PgParamTree, window).param_tree  # type: ParameterTree
     parent = param_tree
     # for i in range(len(param_path)-1):
     for i in param_path:
@@ -305,8 +317,8 @@ class PgParamVar(QtSignaledVar):
         return self.param.value()
 
 
-def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):
-    param_in_paramtree(widget_name, param_path, param, window=window)
+def var_in_paramtree(place: Place, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):
+    param_in_paramtree(place, param_path, param, window=window)
 
     if var is None:
         var = PgParamVar(param)
@@ -317,77 +329,78 @@ def var_in_paramtree(widget_name: str, param_path: Sequence[str], param, var: Wr
     return var
 
 
-def task_in_paramtree(widget_name: str, param_path: Sequence[str],
+def task_in_paramtree(place: Place, param_path: Sequence[str],
                       func: Callable[['Checkpoint'], Any] = None, *,
                       window=None):
     *parent_path, name = param_path
     param = TaskParameter(name=name, func=func)
-    param_in_paramtree(widget_name, parent_path, param, window=window)
+    param_in_paramtree(place, parent_path, param, window=window)
     return param
 
 
-def action_in_paramtree(widget_name: str, param_path: Sequence[str], func: Callable[[], Any] = None, *,
+def action_in_paramtree(place: Place, param_path: Sequence[str], func: Callable[[], Any] = None, *,
                         window=None):
     *parent_path, name = param_path
     param = ActionParameter(name=name, func=func)
-    param_in_paramtree(widget_name, parent_path, param, window=window)
+    param_in_paramtree(place, parent_path, param, window=window)
     return param
 
 
-def decor_task_in_paramtree(widget_name: str, param_path: Sequence[str], *, window=None):
+def decor_task_in_paramtree(place: Place, param_path: Sequence[str], *, window=None):
     @wraps(task_in_paramtree)
     def f(func):
-        task_in_paramtree(widget_name, param_path, func, window=window)
+        task_in_paramtree(place, param_path, func, window=window)
         return func
 
     return f
 
 
-def decor_action_in_paramtree(widget_name: str, param_path: Sequence[str], *, window=None):
+def decor_action_in_paramtree(place: Place, param_path: Sequence[str], *, window=None):
     @wraps(action_in_paramtree)
     def f(func):
-        action_in_paramtree(widget_name, param_path, func, window=window)
+        action_in_paramtree(place, param_path, func, window=window)
         return func
 
     return f
 
 
-def combo_in_paramtree(widget_name: str, param_path: Sequence[str], choices, var: Wrapped = None, *, window=None):
+def combo_in_paramtree(place: Place, param_path: Sequence[str], choices, var: Wrapped = None, *, window=None):
     *parent_path, name = param_path
     param = Parameter.create(name=name, type='list')
-    res = var_in_paramtree(widget_name, parent_path, param=param, var=var, window=window)
-    global_refs[(widget_name, tuple(param_path), 'limits')] = volatile(reactive(param.setLimits)(choices))
+    res = var_in_paramtree(place, parent_path, param=param, var=var, window=window)
+    global_refs[(place, tuple(param_path), 'limits')] = volatile(reactive(param.setLimits)(choices))
     return res
 
 
-def checkbox_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, *, window=None):
+def checkbox_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: Wrapped = None, *, window=None):
+    assert not isinstance(param_path, str)
     *parent_path, name = param_path
     param = Parameter.create(name=name, type='bool', value=value, default=value)
-    res = var_in_paramtree(widget_name, parent_path, param=param, var=var, window=window)
+    res = var_in_paramtree(place, parent_path, param=param, var=var, window=window)
     return res
 
 
-def text_in_paramtree(widget_name: str, param_path: Sequence[str], multiline=False, value=None, var: Wrapped = None, *,
+def text_in_paramtree(place: Place, param_path: Sequence[str], multiline=False, value=None, var: Wrapped = None, *,
                       window=None, **kwargs):
     *parent_path, name = param_path
-    return var_in_paramtree(widget_name, parent_path,
+    return var_in_paramtree(place, parent_path,
                             param=Parameter.create(name=name, type='text' if multiline else 'str',
                                                    value=value, default=value, **kwargs),
                             var=var, window=window)
 
 
-def int_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, *,
+def int_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: Wrapped = None, *,
                       window=None, **kwargs):
     *parent_path, name = param_path
-    return var_in_paramtree(widget_name, parent_path,
+    return var_in_paramtree(place, parent_path,
                             param=Parameter.create(name=name, type='int', decimals=7, value=value, default=value, **kwargs),
                             var=var, window=window)
 
 
-def float_in_paramtree(widget_name: str, param_path: Sequence[str], value=None, var: Wrapped = None, window=None,
+def float_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: Wrapped = None, window=None,
                        **kwargs):
     *parent_path, name = param_path
-    return var_in_paramtree(widget_name, parent_path,
+    return var_in_paramtree(place, parent_path,
                             param=Parameter.create(name=name, type='float', value=value, default=value,
                                                    **kwargs),
                             var=var, window=window)
@@ -444,22 +457,22 @@ def decor_action_in_menu(path: Sequence[str],
     return f
 
 
-def set_titles_mpl(name, title=None, x=None, y=None):
+def set_titles_mpl(place: Place, title=None, x=None, y=None):
     if title is not None:
-        sdupy.unwrap(vis.axes(name)).set_title(title)
+        sdupy.unwrap(vis.axes(place)).set_title(title)
     if x is not None:
-        sdupy.unwrap(vis.axes(name)).set_xlabel(x)
+        sdupy.unwrap(vis.axes(place)).set_xlabel(x)
     if y is not None:
-        sdupy.unwrap(vis.axes(name)).set_ylabel(y)
-    vis.widget(name).tight_layout()
+        sdupy.unwrap(vis.axes(place)).set_ylabel(y)
+    vis.widget(place).tight_layout()
 
 
 
-def pg_extent(widget, name, value=(0, 0, 1, 1)):
+def pg_extent(place: Place, name, value=(0, 0, 1, 1)):
     extent_xy = value[0], value[2]
     extent_wh = value[1] - value[0], value[3] - value[2]
     roi = pg.ROI(extent_xy, extent_wh)
-    vis.draw_pg(widget, name, [roi])
+    vis.draw_pg(place, name, [roi])
     vis.pg_roi_add_8handles(roi)
 
     v = sdupy.var(value)
@@ -480,9 +493,9 @@ def pg_extent(widget, name, value=(0, 0, 1, 1)):
 
     return v
 
-def pg_vline(widget, name, var=0, eager=False, **kwargs):
+def pg_vline(place: Place, name, var=0, eager=False, **kwargs):
     line = pg.InfiniteLine(angle=90, **kwargs)
-    vis.draw_pg(widget, name, [line])
+    vis.draw_pg(place, name, [line])
     # vis.pg_roi_add_8handles(roi)
 
     from sdupy.pyreactive import Var
@@ -504,6 +517,6 @@ def pg_vline(widget, name, var=0, eager=False, **kwargs):
         if x != line.pos()[0]:
             line.setPos(x)
 
-    vis.global_refs[(vis.widget(widget), name + "__setter")] = vis.trigger_if_visible(set_to_var(var),
-                                                                                      vis.widget(widget))
+    vis.global_refs[(vis.widget(place), name + "__setter")] = vis.trigger_if_visible(set_to_var(var),
+                                                                                      vis.widget(place))
     return var
