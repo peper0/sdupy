@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from sdupy.pyreactive.decorators import reactive
 from sdupy.pyreactive.var import NotInitializedError, volatile
 
@@ -5,12 +7,14 @@ from sdupy.pyreactive.var import NotInitializedError, volatile
 def bind_vars(*settable_vars, readonly_vars=tuple()):
     def set_if_inequal(var_to_set, new_value):
         try:
-            # print("{} is {}".format(repr(var_to_set), var_to_set.__inner__))
-            if var_to_set.__inner__ == new_value:
+            is_equal = (var_to_set.__inner__ == new_value)
+            if isinstance(is_equal, Iterable):
+                # e.g. numpy array comparison
+                is_equal = all(is_equal)
+            if is_equal:
                 return
         except NotInitializedError:
             pass
-        # print("setting {} to {}".format(repr(var_to_set), new_value))
         var_to_set.__inner__ = new_value
 
     @reactive

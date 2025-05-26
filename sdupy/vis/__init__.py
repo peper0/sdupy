@@ -303,10 +303,6 @@ class PgParamVar(QtSignaledVar):
     def __init__(self, param: Parameter):
         super().__init__(param.sigValueChanged)
         self.param = param
-        self.param.sigValueChanged.connect(self.test)
-
-    def test(self):
-        print("{}, changed".format(self))
 
     def set(self, value):
         self.param.setValue(value)
@@ -315,14 +311,15 @@ class PgParamVar(QtSignaledVar):
         return self.param.value()
 
 
-def var_in_paramtree(place: Place, param_path: Sequence[str], param, var: Wrapped = None, *, window=None):
+def var_in_paramtree(place: Place, param_path: Sequence[str], param, var: Wrapped = None, readonly = False, *, window=None):
     param_in_paramtree(place, param_path, param, window=window)
 
     pg_param_var = PgParamVar(param)
     if var is None:
         var = pg_param_var
     else:
-        store_global_ref((place, tuple(param_path)), bind_vars(var, pg_param_var))
+        bv = bind_vars(pg_param_var, var) if not readonly else bind_vars(pg_param_var,  readonly_vars=(var,))
+        store_global_ref((place, tuple(param_path), param.opts['name']), bv)
 
     return var
 
@@ -378,13 +375,13 @@ def checkbox_in_paramtree(place: Place, param_path: Sequence[str], value=None, v
     return res
 
 
-def text_in_paramtree(place: Place, param_path: Sequence[str], multiline=False, value=None, var: Wrapped = None, *,
+def text_in_paramtree(place: Place, param_path: Sequence[str], multiline=False, value=None, var: Wrapped = None, readonly = False, *,
                       window=None, **kwargs):
     *parent_path, name = param_path
     return var_in_paramtree(place, parent_path,
                             param=Parameter.create(name=name, type='text' if multiline else 'str',
-                                                   value=value, default=value, **kwargs),
-                            var=var, window=window)
+                                                   value=value, default=value, readonly=readonly, **kwargs),
+                            var=var,readonly=readonly, window=window)
 
 
 def int_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: Wrapped = None, *,
