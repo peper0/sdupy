@@ -6,7 +6,7 @@ from builtins import NotImplementedError
 from contextlib import contextmanager, suppress
 from inspect import iscoroutinefunction
 from itertools import chain
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple, TypeVar
 
 from sdupy.pyreactive.decorators import HideStackHelper, hide_nested_calls, stop_hiding_nested_calls
 from .common import Wrapped, is_wrapper, unwrapped
@@ -165,6 +165,16 @@ def as_observable(v):
         return wrap(v)
 
 
+T = TypeVar("T")
+
+
+def wrapped(raw: T | Wrapped[T]) -> Wrapped[T]:
+    if is_wrapper(raw):
+        return raw
+    else:
+        return wrap(raw)
+
+
 class ArgsHelper:
     @stop_hiding_nested_calls
     def __init__(self, args, kwargs, signature, callable):
@@ -230,7 +240,10 @@ def observe_args(args_helper: ArgsHelper, pass_args: Set[str], notifier):
             maybe_observe(arg, notifier)
 
 
-class Proxy(Wrapped, ConstForwarders, MutatingForwarders):
+T = TypeVar('T')
+
+
+class Proxy(Wrapped[T], ConstForwarders, MutatingForwarders):
     def __init__(self, other_var: Wrapped):
         assert other_var is not None
         super().__init__()
@@ -242,11 +255,11 @@ class Proxy(Wrapped, ConstForwarders, MutatingForwarders):
     def __notifier__(self):
         return self._notifier
 
-    def _target(self):
+    def _target(self) -> Wrapped[T]:
         return self._other_var
 
     @property
-    def __inner__(self):
+    def __inner__(self) -> T:
         return self._other_var.__inner__
 
     def __getattr__(self, item):
