@@ -394,6 +394,10 @@ def int_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: W
 
 def float_in_paramtree(place: Place, param_path: Sequence[str], value=None, var: Wrapped = None, window=None,
                        **kwargs):
+    """
+    see :func:`pyqtgraph.parametertree.Parameter.Parameter.__init__`
+    and pyqtgraph.parametertree.parameterTypes.numeric.NumericParameterItem for additional parameters
+    """
     *parent_path, name = param_path
     return var_in_paramtree(place, parent_path,
                             param=Parameter.create(name=name, type='float', value=value, default=value,
@@ -493,19 +497,16 @@ def pg_vline(place: Place, name, var=0, eager=False, **kwargs):
     vis.draw_pg(place, name, [line])
     # vis.pg_roi_add_8handles(roi)
 
-    from sdupy.pyreactive import Var
-    if not isinstance(var, Var):
-        var = sdupy.var(var)
-
-    def refr():
+    def set_pos():
         x, _ = line.pos()
-        if x != var.__inner__:
+
+        if x != var.__inner__ and hasattr(var, "set"):
             var.set(x)
 
     if eager:
-        line.sigPositionChanged.connect(refr)
+        line.sigPositionChanged.connect(set_pos)
     else:
-        line.sigPositionChangeFinished.connect(refr)
+        line.sigPositionChangeFinished.connect(set_pos)
 
     @reactive
     def set_to_var(x):
