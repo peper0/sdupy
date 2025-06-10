@@ -64,6 +64,11 @@ class TriggerIfVisible(Proxy):
                 self._other_var.__inner__  # trigger run even if the result is not used
         return True
 
+    def _cleanup(self):
+        self.widget.visibilityChanged.disconnect(self._trigger)
+        self._other_var.__notifier__.remove_observer(self._notifier)
+        self._other_var = None
+
 
 def trigger_if_visible(var_or_val, widget):
     if is_wrapper(var_or_val):
