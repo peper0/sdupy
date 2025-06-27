@@ -24,7 +24,6 @@ class ComboBox(QWidget):
     def set_choices(self, choices: List[Union[Any, Tuple[str, Any]]]):
         current_text = self.combo.currentText()
         self.combo.clear()
-        print("setting choices to", choices)
         for td in choices:
             if isinstance(td, tuple) and len(td) == 2:
                 title, data = td
@@ -33,8 +32,8 @@ class ComboBox(QWidget):
                 title = str(td)
             self.combo.addItem(title, data)
         with suppress(ValueError):
+            # FIXME: or current data
             self.combo.setCurrentIndex(choices.index(current_text))
-            print("setting to ", choices.index(current_text))
         if self.combo.currentIndex() < 0:
             self.combo.setCurrentIndex(0)
 

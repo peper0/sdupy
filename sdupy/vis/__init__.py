@@ -29,7 +29,7 @@ from sdupy.windows import WindowSpec
 from ._helpers import image_to_mpl, image_to_pg, make_pg_image_item, levels_for, pg_hold_items
 from .utils import *
 
-Place = str
+Place = str | QWidget
 """
 A placement of a widget.
 * `str` - a name of a widget in the current window

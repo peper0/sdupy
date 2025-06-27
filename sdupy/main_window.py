@@ -139,6 +139,7 @@ class MainWindow(QMainWindow):
 
     def obtain_widget_instance(self, name, factory_or_name):
         if name not in self.widgets:
+            assert factory_or_name is not None, f"object {name} not found and no factory provided"
             if isinstance(factory_or_name, str):
                 factory_desc = widgets.registered_factories[factory_or_name]
             else:

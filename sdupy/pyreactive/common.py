@@ -44,6 +44,9 @@ class Wrapped(Generic[T]):
         return "Wrapped({})".format(repr(self.__inner__))
 
 
+MaybeWrapped = Wrapped[T] | T
+
+
 def is_wrapper(v):
     return isinstance(v, Wrapped)
 
@@ -72,5 +75,9 @@ def unwrapped(v: Union[T, Wrapped[T]]) -> T:
         return unwrap(v)
     else:
         return v
+
+
+def notify(v: Wrapped[T]):
+    v.__notifier__.notify_observers()
 
 # "wrapped" is in var.py
