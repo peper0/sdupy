@@ -1,6 +1,7 @@
 import asyncio
 from abc import abstractmethod
 from typing import Callable, Coroutine, Union, Generic, TypeVar
+from contextlib import contextmanager
 
 
 def ensure_coro_func(f):
@@ -77,7 +78,15 @@ def unwrapped(v: Union[T, Wrapped[T]]) -> T:
         return v
 
 
+# "wrapped" is in var.py
+
 def notify(v: Wrapped[T]):
     v.__notifier__.notify_observers()
 
-# "wrapped" is in var.py
+
+@contextmanager
+def updating(v: Wrapped[T]):
+    try:
+        yield unwrapped(v)
+    finally:
+        notify(v)

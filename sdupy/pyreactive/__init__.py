@@ -1,9 +1,9 @@
 from sdupy.pyreactive.refresher import wait_for_var
-from .common import is_wrapper, unwrap, unwrap_exception, unwrapped, notify
+from .common import is_wrapper, unwrap, unwrap_exception, unwrapped, notify, updating
 from .decorators import reactive, reactive_finalizable
 from .var import Constant, Var, Wrapped, const, var, volatile
 
-__ALL__ = [
+__all__ = [
     'reactive',
     'reactive_finalizable',
     'wait_for_var',
@@ -18,8 +18,8 @@ __ALL__ = [
     'const',
     'var',
     'volatile',
+    'updating',
 ]
-
 
 @reactive
 def make_list(*args):
