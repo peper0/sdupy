@@ -1,6 +1,6 @@
 import asyncio
 from abc import abstractmethod
-from typing import Callable, Coroutine, Union, Generic, TypeVar
+from typing import Callable, Coroutine, Union, Generic, TypeVar, Generator
 from contextlib import contextmanager
 
 
@@ -85,7 +85,7 @@ def notify(v: Wrapped[T]):
 
 
 @contextmanager
-def updating(v: Wrapped[T]):
+def updating(v: Wrapped[T]) -> Generator[T, None, None]:
     try:
         yield unwrapped(v)
     finally:

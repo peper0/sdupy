@@ -385,6 +385,10 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
             # AttributeError could be interpreted as 'no such method' on at some point of the call stack
             raise Exception("Disabling AttributeError") from e
 
+    @__inner__.setter
+    def __inner__(self, value):
+        self.set(value)
+
     def _target(self):
         self._update_if_dirty()
         if self._ref is None:
@@ -400,6 +404,11 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _set_ref(self, ref):
         self._unobserve_value()
         self._ref = as_observable(ref)
+        if hasattr(ref, "set"):
+            self.set = ref.set  # so ugly
+        else:
+            with suppress(Exception):
+                del self.set
         self._exception = None
         self._observe_value()
 
@@ -423,6 +432,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
             #logger.debug('updating {}'.format(self._notifier.name))
             updates_stack.append(self._notifier.line)
             try:
+                "----- IGNORE THIS FRAME -----";
                 hide_nested_calls(self._update)()
             except Exception as e:
                 #import traceback
