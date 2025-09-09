@@ -9,11 +9,28 @@ from .main_window import MainWindow
 #    var_from_table
 from .pyreactive import var, const, reactive, reactive_finalizable, unwrap
 from .windows import window, window_as_current
+from .pyreactive import settings
+
+
 
 # fixme: ability to disable this
 install_mainloop()
 
 # fixme: move it somewhere or disable conditionally
-stderr_logger_handler = logging.StreamHandler(stream=sys.stderr)
-logging.getLogger().addHandler(stderr_logger_handler)
-stderr_logger_handler.setLevel(logging.INFO)
+# stderr_logger_handler = logging.StreamHandler(stream=sys.stderr)
+# logging.getLogger().addHandler(stderr_logger_handler)
+# stderr_logger_handler.setLevel(logging.INFO)
+
+__all__ = [
+    'MainWindow',
+    'window',
+    'window_as_current',
+    'var',
+    'const',
+    'reactive',
+    'reactive_finalizable',
+    'unwrap',
+    'settings',
+    'install_mainloop',
+    'run_mainloop',
+]

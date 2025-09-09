@@ -35,5 +35,12 @@ def none_if_error(v):
 
     return helper(v, v2=v)
 
+
+@reactive
+def error_if_none(v, msg="Value is None"):
+    if v is None:
+        raise ValueError(msg)
+    return v
+
 def pickn(iterable, n):
     return (v for v, _ in zip(iterable, range(n)))
