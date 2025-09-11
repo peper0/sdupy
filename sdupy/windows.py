@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from typing import Union
 
@@ -10,6 +11,12 @@ windows_by_name = dict()
 WindowSpec = Union[str, MainWindow, None]
 
 
+def check_qt_version():
+    """"""
+    assert os.environ.get('PYQTGRAPH_QT_LIB') == 'PyQt5', \
+        "This module is designed to work with PyQt5. Please set the env: PYQTGRAPH_QT_LIB=PyQt5"
+
+
 def window(name: WindowSpec = None, default_state_dir=None):
     """
     Returns window with given name. Create it if doesn't exist. If `name` is `None`, return last window used.
@@ -18,6 +25,7 @@ def window(name: WindowSpec = None, default_state_dir=None):
     :return:
     """
     global current_main_window
+    check_qt_version()
     if isinstance(name, MainWindow):
         current_main_window = name
         return name

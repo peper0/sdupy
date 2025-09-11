@@ -21,8 +21,6 @@ from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
 from . import register_widget
 
-assert os.environ.get('PYQTGRAPH_QT_LIB') == 'PyQt5', \
-    "This module is designed to work with PyQt5. Please set the env: PYQTGRAPH_QT_LIB=PyQt5"
 
 class PgOneItem(pg.GraphicsView):
     def __init__(self, parent, view: pg.GraphicsWidget):
