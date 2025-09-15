@@ -378,7 +378,7 @@ class LogRecordsModel(QAbstractTableModel, logging.Handler):
         return s
 
 
-global_logger_handler = LogRecordsModel()
+# global_logger_handler = LogRecordsModel()
 
 # logging.getLogger().setLevel(logging.DEBUG)
 # global_logger_handler.setLevel(logging.DEBUG)
@@ -390,6 +390,7 @@ global_logger_handler = LogRecordsModel()
 @register_widget("logs")
 class Logs(Table):
     def __init__(self, parent, name):
+        global_logger_handler = LogRecordsModel()
         logging.getLogger().addHandler(global_logger_handler)
         super().__init__(parent)
         self._table_view.setModel(global_logger_handler)
