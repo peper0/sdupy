@@ -13,8 +13,7 @@ from .pyreactive import settings
 
 
 
-# fixme: ability to disable this
-install_mainloop()
+
 
 # fixme: move it somewhere or disable conditionally
 # stderr_logger_handler = logging.StreamHandler(stream=sys.stderr)

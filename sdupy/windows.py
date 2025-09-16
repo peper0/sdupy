@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from typing import Union
 
 from sdupy import MainWindow
+from sdupy.integration.auto import install as install_mainloop
 
 current_main_window = None  # type: MainWindow
 
@@ -10,12 +11,20 @@ windows_by_name = dict()
 
 WindowSpec = Union[str, MainWindow, None]
 
+initialized = False
+
 
 def check_qt_version():
     """"""
     assert os.environ.get('PYQTGRAPH_QT_LIB') == 'PyQt5', \
         "This module is designed to work with PyQt5. Please set the env: PYQTGRAPH_QT_LIB=PyQt5"
 
+def assure_initialized():
+    global initialized
+    if not initialized:
+        check_qt_version()
+        install_mainloop()
+        initialized = True
 
 def window(name: WindowSpec = None, default_state_dir=None):
     """
@@ -25,7 +34,7 @@ def window(name: WindowSpec = None, default_state_dir=None):
     :return:
     """
     global current_main_window
-    check_qt_version()
+    assure_initialized()
     if isinstance(name, MainWindow):
         current_main_window = name
         return name
