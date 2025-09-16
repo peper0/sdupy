@@ -4,11 +4,12 @@ import logging
 import time
 import weakref
 from inspect import iscoroutinefunction
+from typing import Callable, Optional
 
 import pyqtgraph as pg
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtGui import QColor, QFont, QDragEnterEvent, QDropEvent
 from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget, \
     QApplication, QTreeWidgetItem
 from pyqtgraph import ItemSample
@@ -20,8 +21,6 @@ from sdupy.utils import ignore_errors, make_async_using_thread, make_sync
 from sdupy.widgets.helpers import paramtree_dump_params, paramtree_load_params
 from . import register_widget
 
-assert os.environ.get('PYQTGRAPH_QT_LIB') == 'PyQt5', \
-    "This module is designed to work with PyQt5. Please set the env: PYQTGRAPH_QT_LIB=PyQt5"
 
 class PgOneItem(pg.GraphicsView):
     def __init__(self, parent, view: pg.GraphicsWidget):
@@ -70,6 +69,12 @@ class PgFigure(PgOneItem):
 
 class PlotViewBox(pg.ViewBox):
     doubleClicked = QtCore.pyqtSignal(object)
+    dragEnter = QtCore.pyqtSignal(object)  # QDragEnterEvent
+    drop = QtCore.pyqtSignal(object)  # QDropEvent
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
 
     def wheelEvent(self, ev, axis=None):
         # zoom only horizontoally if Shift is pressed and vertically if Ctrl is pressed
@@ -86,13 +91,44 @@ class PlotViewBox(pg.ViewBox):
         super().mouseDoubleClickEvent(ev)
         self.doubleClicked.emit(ev)
 
+    def dragEnterEvent(self, ev):
+        self.dragEnter.emit(ev)
+        # The event is not accepted here by default. The receiver of the signal must call ev.accept().
+
+    def dropEvent(self, ev):
+        self.drop.emit(ev)
+        # The receiver should call ev.acceptProposedAction() if it handles the drop.
+
+
 @register_widget("pyqtgraph plot")
 class PgPlot(PgOneItem):
+    dropped = QtCore.pyqtSignal(object, str)  # Emits data and mime_type
+
     def __init__(self, parent, name):
         vb = PlotViewBox(None, name=name)
         self.view: pg.PlotItem
         super().__init__(parent, pg.PlotItem(viewBox=vb))
         self.view.showGrid(x=True, y=True)
+        self.mime_type_handler: Optional[Callable[[QMimeData], Optional[str]]] = None
+
+        vb.dragEnter.connect(self.on_drag_enter)
+        vb.drop.connect(self.on_drop)
+
+    def on_drag_enter(self, ev: QDragEnterEvent):
+        if not self.mime_type_handler:
+            return
+        accepted_mime_type = self.mime_type_handler(ev.mimeData())
+        if accepted_mime_type:
+            ev.acceptProposedAction()
+
+    def on_drop(self, ev: QDropEvent):
+        if not self.mime_type_handler:
+            return
+        accepted_mime_type = self.mime_type_handler(ev.mimeData())
+        if accepted_mime_type:
+            data = ev.mimeData().data(accepted_mime_type).data().decode()
+            self.dropped.emit(data, accepted_mime_type)
+            ev.acceptProposedAction()
 
     def dump_state(self):
         return dict(

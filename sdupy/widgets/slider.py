@@ -67,8 +67,9 @@ class Slider(QWidget):
 
         if self._uses_integer() and value is not None:
             value = int(round(value))
-        set_if_inequal(self._slider_val, value * self._slider_mult)
-        set_if_inequal(self._spin_val, value)
+        if value is not None:
+            set_if_inequal(self._slider_val, value * self._slider_mult)
+            set_if_inequal(self._spin_val, value)
         set_if_inequal(self._var, value)
 
     @property

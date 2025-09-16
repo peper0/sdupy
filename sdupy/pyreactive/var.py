@@ -6,13 +6,16 @@ from builtins import NotImplementedError
 from contextlib import contextmanager, suppress
 from inspect import iscoroutinefunction
 from itertools import chain
-from typing import Any, Dict, List, Set, Tuple, TypeVar
+from typing import Any, Dict, List, Set, Tuple, TypeVar, Generic
 
 from sdupy.pyreactive.decorators import HideStackHelper, hide_nested_calls, stop_hiding_nested_calls
+from . import settings
 from .common import Wrapped, is_wrapper, unwrapped
 from .decorators import DecoratedFunction, reactive
 from .forwarder import ConstForwarders, MutatingForwarders
 from .notifier import DummyNotifier, Notifier, ScopedName
+
+T = TypeVar('T')
 
 
 class Wrapper(Wrapped):
@@ -62,12 +65,12 @@ class Constant(Wrapped, ConstForwarders):
     def _target(self):
         return self
 
-    #Not sure whether we should simply forward it without @reactive
-    #without @reactive const(v).something() is not reactive anymore, which is bad
-    #so let's see what happens if we change it...
+    # Not sure whether we should simply forward it without @reactive
+    # without @reactive const(v).something() is not reactive anymore, which is bad
+    # so let's see what happens if we change it...
     @reactive
     def __getattr__(self, item):
-        #return getattr(self._target().__inner__, item)
+        # return getattr(self._target().__inner__, item)
         return getattr(self, item)
 
 
@@ -92,13 +95,14 @@ class ArgEvalError(Exception):
     """
     A reactive argument is in error state. The argument error should be the cause of this error.
     """
+
     def __init__(self, arg_name, function_name):
         super().__init__("error in argument '{}' of '{}'".format(arg_name, function_name))
         self.arg_name = arg_name
         self.function_name = function_name
 
 
-class Var(Wrapper, ConstForwarders, MutatingForwarders):
+class Var(Wrapper, ConstForwarders, MutatingForwarders, Generic[T]):
     NOT_INITIALIZED = NotInitializedError()
 
     def __init__(self, raw=NOT_INITIALIZED, name=None):
@@ -134,11 +138,10 @@ class Var(Wrapper, ConstForwarders, MutatingForwarders):
         self.set(other)
         return self
 
-    #(see Const.__getattr__)
+    # (see Const.__getattr__)
     @reactive
     def __getattr__(self, item):
         return getattr(self, item)
-
 
 
 def var(raw=Var.NOT_INITIALIZED):
@@ -337,7 +340,7 @@ updates_stack = []
 
 def obtain_call_line():
     return None
-    #FIXME: finish this
+    # FIXME: finish this
     import traceback
     return traceback.extract_stack()
 
@@ -376,14 +379,18 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
 
             if self._exception is not None:
                 raise self._exception
-    #            if isinstance(self._exception, SilentError):
-    #                raise self._exception
-                #raise Exception() from self._exception
+            #            if isinstance(self._exception, SilentError):
+            #                raise self._exception
+            # raise Exception() from self._exception
             if self._ref is not None and hasattr(self._ref, '__inner__'):
                 return self._ref.__inner__
         except AttributeError as e:
             # AttributeError could be interpreted as 'no such method' on at some point of the call stack
             raise Exception("Disabling AttributeError") from e
+
+    @__inner__.setter
+    def __inner__(self, value):
+        self.set(value)
 
     def _target(self):
         self._update_if_dirty()
@@ -400,6 +407,11 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _set_ref(self, ref):
         self._unobserve_value()
         self._ref = as_observable(ref)
+        if hasattr(ref, "set"):
+            self.set = ref.set  # so ugly
+        else:
+            with suppress(Exception):
+                del self.set
         self._exception = None
         self._observe_value()
 
@@ -420,15 +432,20 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _update_if_dirty(self):
         if self._dirty:
             # FIXME: doesn't work for async updates
-            #logger.debug('updating {}'.format(self._notifier.name))
+            # logger.debug('updating {}'.format(self._notifier.name))
             updates_stack.append(self._notifier.line)
             try:
+                "----- IGNORE THIS FRAME -----";
                 hide_nested_calls(self._update)()
             except Exception as e:
-                #import traceback
-                #print(traceback.print_stack())
-                logging.exception('error when updating {}'.format(self._notifier.name))
-                #logging.exception('error when updating {}'.format(
+                # import traceback
+                # print(traceback.print_stack())
+                if settings.log_exceptions:
+                    logging.exception(
+                        "Error when updating {}. This exception is propagated to other vars and you probably"
+                        " don't want to see this message. Set `sdupy.settings.log_exceptions = False` to hide it.".format(
+                            self._notifier.name))
+                # logging.exception('error when updating {}'.format(
                 #    '\n======\n'.join(['\n'.join(map(str, l)) for l in updates_stack])))
             updates_stack.pop()
             self._dirty = False
