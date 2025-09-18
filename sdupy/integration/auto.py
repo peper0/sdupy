@@ -39,7 +39,6 @@ def get_module():
         else:
             print("unknown IPython class: {}".format(ipython.__class__.__name__))
 
-    print("no supported ipython/jupyter environment detected")
     from . import standalone
     return standalone
 

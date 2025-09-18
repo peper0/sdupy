@@ -19,5 +19,5 @@ def run_mainloop():
 
 
 def install():
-    print("no ipython/jupyter environment detected, call 'run_mainloop()' after initialization of the application")
+    print("no ipython/jupyter environment detected; call 'run_mainloop()' after initialization of the application")
 
