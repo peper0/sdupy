@@ -15,7 +15,7 @@ class PandasTable(Table):
     def __init__(self, parent):
         super().__init__(parent)
         self.model = DataTreeModel(self)
-        self._table_view.setModel(self.model)
+        self.table_view.setModel(self.model)
         # self._table_view.setSortingEnabled(True)
 
         self._filter_edit = QLineEdit(self)

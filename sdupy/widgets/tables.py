@@ -19,24 +19,31 @@ from ..pyreactive import Wrapped, reactive, unwrap
 
 @register_widget("generic table")
 class Table(QWidget):
+    table_view: QTableView
     def __init__(self, parent):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
 
-        self._table_view = QTableView(self)
-        self._table_view.horizontalHeader().setSectionsMovable(True)
-        self.layout.addWidget(self._table_view)
+        self.table_view = QTableView(self)
+        font_metrics = self.table_view.fontMetrics()
+        self.table_view.verticalHeader().setDefaultSectionSize(font_metrics.height())
+        self.table_view.horizontalHeader().setSectionsMovable(True)
+        self.layout.addWidget(self.table_view)
         self.visibilityChanged = parent.visibilityChanged  # FIXME:
+
+    def set_model(self, model: QAbstractTableModel):
+        assert isinstance(model, QAbstractTableModel)
+        self.table_view.setModel(model)
 
     def dump_state(self):
         return dict(
-            header_state=bytes(self._table_view.horizontalHeader().saveState()).hex(),
+            header_state=bytes(self.table_view.horizontalHeader().saveState()).hex(),
         )
 
     def load_state(self, state: dict):
         if 'header_state' in state:
-            self._table_view.horizontalHeader().restoreState(bytes.fromhex(state['header_state']))
+            self.table_view.horizontalHeader().restoreState(bytes.fromhex(state['header_state']))
 
 
 @register_widget("variables table")
@@ -44,7 +51,7 @@ class VarsTable(Table):
     def __init__(self, parent, name):
         super().__init__(parent)
         self.model = VarsModel(self)
-        self._table_view.setModel(self.model)
+        self.table_view.setModel(self.model)
 
         self.insert_var = self.model.insert_var
         self.remove_var = self.model.remove_var
@@ -154,16 +161,11 @@ class VarsModel(QAbstractTableModel):
 
 
 @register_widget("array table")
-class ArrayTable(QWidget):
+class ArrayTable(Table):
     DEFAULT_FORMAT = '{}'  # '{:.3g}' is good for floats, but there can be a nonfloat
 
     def __init__(self, parent, name):
         super().__init__(parent)
-        self.layout = QVBoxLayout(self)
-        self.setLayout(self.layout)
-
-        self._table_view = QTableView(self)
-        self.layout.addWidget(self._table_view)
 
         self._format = self.DEFAULT_FORMAT
         self._model = None
@@ -199,7 +201,7 @@ class ArrayTable(QWidget):
     def _set_current_val(self, val):
         self._model = ArrayModel(val, self)
         self._model.format = self._format
-        self._table_view.setModel(self._model)
+        self.set_model(self._model)
 
 
 class ArrayModel(QAbstractTableModel):
@@ -210,7 +212,10 @@ class ArrayModel(QAbstractTableModel):
         assert hasattr(array, 'shape'), "expected array, got {} of type {}".format(array, type(array))
         assert hasattr(array, '__getitem__')
         self._array = array  # type: np.ndarray
-        self.format = None
+        self.format = "{}"
+        if self._array.ndim<2 and not self._array.dtype.names:
+            self._array = self._array[:, None]
+
         if self._array.ndim >= 2:
             self._columns = list(range(self._array.shape[1]))
         else:
@@ -246,7 +251,7 @@ class ArrayModel(QAbstractTableModel):
     @ignore_errors(retval=Qt.ItemFlags())
     def flags(self, index: QModelIndex):
         if self._index_is_good(index):
-            return super().flags(index) | (Qt.ItemIsEditable if True else 0)
+            return super().flags(index)
         return super().flags(index)
 
     def _index_is_good(self, index: QModelIndex):
@@ -269,16 +274,13 @@ class ArrayModel(QAbstractTableModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
+                if section >= len(self._columns):
+                    # it happens during restoring state
+                    return ""
                 return str(self._columns[section])
             else:
                 return str(section)
 
-
-@reactive()
-async def gen(n, t=1):
-    for i in range(n):
-        await asyncio.sleep(t)
-        yield 1 + i * i
 
 
 import logging
@@ -393,4 +395,4 @@ class Logs(Table):
         global_logger_handler = LogRecordsModel()
         logging.getLogger().addHandler(global_logger_handler)
         super().__init__(parent)
-        self._table_view.setModel(global_logger_handler)
+        self.table_view.setModel(global_logger_handler)
