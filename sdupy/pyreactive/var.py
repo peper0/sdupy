@@ -361,16 +361,19 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         self._dirty = False
         if async_:
             # I have no idea how to call do lazy updating if update is async (and getter isn't)
-            self._notifier = Notifier(self._update_async)
+            self._retval_notifier = Notifier(self._update_async)
+            assert "async update is no more supported"
         else:
-            self._notifier = Notifier(self._args_changed)
+            self._retval_notifier = Notifier(lambda: True)
+            self._args_notifier = Notifier(self._args_changed)
+            self._args_notifier.add_observer(self._retval_notifier)
             self._dirty = True
         self._exception = None
-        self._notifier.line = obtain_call_line()
+        self._retval_notifier.line = obtain_call_line()
 
     @property
     def __notifier__(self):
-        return self._notifier
+        return self._retval_notifier
 
     @property
     def __inner__(self):
@@ -418,12 +421,12 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     def _unobserve_value(self):
         ref = self._get_ref()
         if ref is not None and hasattr(ref, '__notifier__'):
-            return ref.__notifier__.remove_observer(self._notifier)
+            return ref.__notifier__.remove_observer(self._retval_notifier)
 
     def _observe_value(self):
         ref = self._get_ref()
         if ref is not None and hasattr(ref, '__notifier__'):
-            return ref.__notifier__.add_observer(self._notifier)
+            return ref.__notifier__.add_observer(self._retval_notifier)
 
     @reactive
     def __getattr__(self, item):
@@ -433,7 +436,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
         if self._dirty:
             # FIXME: doesn't work for async updates
             # logger.debug('updating {}'.format(self._notifier.name))
-            updates_stack.append(self._notifier.line)
+            updates_stack.append(self._retval_notifier.line)
             try:
                 "----- IGNORE THIS FRAME -----";
                 hide_nested_calls(self._update)()
@@ -444,7 +447,7 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
                     logging.exception(
                         "Error when updating {}. This exception is propagated to other vars and you probably"
                         " don't want to see this message. Set `sdupy.settings.log_exceptions = False` to hide it.".format(
-                            self._notifier.name))
+                            self._retval_notifier.name))
                 # logging.exception('error when updating {}'.format(
                 #    '\n======\n'.join(['\n'.join(map(str, l)) for l in updates_stack])))
             updates_stack.pop()
@@ -496,22 +499,22 @@ class ReactiveProxy(LazySwitchableProxy):
 
                 if isinstance(arg, (list, tuple)):
                     for a in arg:
-                        observe(a, self.__notifier__)
+                        observe(a, self._args_notifier)
                 else:
-                    observe(arg, self.__notifier__)
+                    observe(arg, self._args_notifier)
 
                 del kwargs[name]
 
         # use other_deps
         for dep in decorated.decorator.other_deps:
-            maybe_observe(dep, self.__notifier__)
+            maybe_observe(dep, self._args_notifier)
 
         self.args_helper = ArgsHelper(args, kwargs, decorated.signature, decorated.really_call)
         self.args = self.args_helper.args
         self.kwargs = self.args_helper.kwargs
         self._update_in_progress = False
 
-        observe_args(self.args_helper, self.decorated.decorator.pass_args, self.__notifier__)
+        observe_args(self.args_helper, self.decorated.decorator.pass_args, self._args_notifier)
 
     @contextmanager
     def _handle_exception(self, reraise=True):
