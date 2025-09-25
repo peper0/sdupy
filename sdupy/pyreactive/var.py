@@ -6,7 +6,8 @@ from builtins import NotImplementedError
 from contextlib import contextmanager, suppress
 from inspect import iscoroutinefunction
 from itertools import chain
-from typing import Any, Dict, List, Set, Tuple, TypeVar, Generic
+from traceback import FrameSummary, format_stack, format_list
+from typing import Any, Dict, List, Set, Tuple, TypeVar, Generic, Sequence
 
 from sdupy.pyreactive.decorators import HideStackHelper, hide_nested_calls, stop_hiding_nested_calls
 from . import settings
@@ -44,7 +45,7 @@ class Wrapper(Wrapped):
         try:
             return '{}({})'.format(self.__class__.__name__, repr(self.__inner__))
         except Exception as e:
-            return '{}(exception={})'.format(self.__class__.__name__, repr(e))
+            return '{}(<error: {}>)'.format(self.__class__.__name__, repr(e))
 
 
 class Constant(Wrapped, ConstForwarders):
@@ -354,10 +355,11 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
     Proxy was given as a parameter to the @reactive function, it should be observed and unwrapped.
     """
 
-    def __init__(self, async_):
+    def __init__(self, async_, trace: Sequence[FrameSummary] = ()):
         super().__init__()
         self.async_ = async_
         self._ref = None
+        self._trace = trace
         self._dirty = False
         if async_:
             # I have no idea how to call do lazy updating if update is async (and getter isn't)
@@ -438,18 +440,26 @@ class LazySwitchableProxy(Wrapped, ConstForwarders):
             # logger.debug('updating {}'.format(self._notifier.name))
             updates_stack.append(self._retval_notifier.line)
             try:
-                "----- IGNORE THIS FRAME -----";
-                hide_nested_calls(self._update)()
+                hide_nested_calls(self._update)()  # ----- IGNORE THIS FRAME -----
+            except SilentError as e:
+                pass
             except Exception as e:
-                # import traceback
-                # print(traceback.print_stack())
                 if settings.log_exceptions:
-                    logging.exception(
-                        "Error when updating {}. This exception is propagated to other vars and you probably"
-                        " don't want to see this message. Set `sdupy.settings.log_exceptions = False` to hide it.".format(
-                            self._retval_notifier.name))
-                # logging.exception('error when updating {}'.format(
-                #    '\n======\n'.join(['\n'.join(map(str, l)) for l in updates_stack])))
+
+                    logging.error(
+                        f"Error when updating {self._retval_notifier.name}. (HINT: use SilentError to avoid seeing this message)."
+                    )
+                    if self._trace:
+                        trace = list(self._trace)
+                        for i, t in enumerate(reversed(trace)):
+                            if "IPython/core/interactiveshell.py" in t.filename:
+                                trace = trace[-i:]
+                                break
+
+                        logging.error(
+                            "The reactive function was called at:\nTraceback (most recent call last):\n  " + "".join(
+                                format_list(trace)))
+                    logging.exception("The exception was:")
             updates_stack.pop()
             self._dirty = False
 
@@ -487,9 +497,9 @@ class HashableCallable:
 
 
 class ReactiveProxy(LazySwitchableProxy):
-    def __init__(self, decorated: DecoratedFunction, args, kwargs):
+    def __init__(self, decorated: DecoratedFunction, args, kwargs, trace: Sequence[FrameSummary] = ()):
         with ScopedName(name=decorated.callable.__name__):
-            super().__init__(async_=iscoroutinefunction(self._update))
+            super().__init__(async_=iscoroutinefunction(self._update), trace=trace)
         self.decorated = decorated  # type: DecoratedFunction
 
         # use dep_only_args
@@ -522,14 +532,18 @@ class ReactiveProxy(LazySwitchableProxy):
             yield
 
         except Exception as e:
-            if isinstance(e, HideStackHelper):
-                e = e.__cause__
+            real_exception = e
+            if isinstance(e, HideStackHelper) and settings.HIDE_IRREVELANT_STACK_FRAMES:
+                real_exception = e.__cause__
             if isinstance(e, SilentError):
-                e = e.__cause__
-                reraise = False  # SilentError is not re-raised by definition
-            self._exception = e
+                real_exception = e
+                # reraise = False  # SilentError is not re-raised by definition  # NO, it's silenced somewhere else
+            self._exception = real_exception
             if reraise:
-                raise HideStackHelper() from e
+                if settings.HIDE_IRREVELANT_STACK_FRAMES:
+                    raise HideStackHelper() from real_exception
+                else:
+                    raise real_exception
 
     def _call(self):
         # returns one of:

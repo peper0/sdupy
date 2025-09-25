@@ -42,7 +42,11 @@ class Wrapped(Generic[T]):
         pass
 
     def __repr__(self):
-        return "Wrapped({})".format(repr(self.__inner__))
+        try:
+            r = repr(self.__inner__)
+        except Exception as e:
+            r = "<error: {}>".format(e)
+        return "Wrapped({})".format(r)
 
 
 MaybeWrapped = Wrapped[T] | T

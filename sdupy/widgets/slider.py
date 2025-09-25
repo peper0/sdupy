@@ -7,20 +7,20 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QHBoxLayout, QScrollBar, QWidget
 from sdupy.pyreactive import Var, reactive
 from sdupy.pyreactive.common import unwrap_def, unwrap
 from sdupy.pyreactive.notifier import ScopedName
-from sdupy.pyreactive.var import NotInitializedError, volatile
+from sdupy.pyreactive.var import NotInitializedError, volatile, SilentError
 from sdupy.widgets.common.qt_property_var import QtPropertyVar
 from sdupy.widgets.common.register import register_widget
 
 
 def set_if_inequal(var_to_set, new_value):
     try:
-        #print("{} is {}".format(repr(var_to_set), var_to_set.__inner__))
         if var_to_set.__inner__ == new_value:
             return
+        var_to_set.__inner__ = new_value
     except NotInitializedError:
         pass
-    #print("setting {} to {}".format(repr(var_to_set), new_value))
-    var_to_set.__inner__ = new_value
+    except SilentError:
+        pass
 
 
 

@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from sdupy.pyreactive.decorators import reactive
-from sdupy.pyreactive.var import NotInitializedError, volatile
+from sdupy.pyreactive.var import NotInitializedError, volatile, SilentError
 
 
 def bind_vars(*settable_vars, readonly_vars=tuple()):
@@ -44,3 +44,23 @@ def error_if_none(v, msg="Value is None"):
 
 def pickn(iterable, n):
     return (v for v, _ in zip(iterable, range(n)))
+
+
+@reactive
+def skip_if_none(v, msg="Value is None"):
+    if v is None:
+        print("skipping due to none value")
+        raise SilentError(msg)
+    print("not skipping")
+    return v
+
+
+@reactive
+def silence_error(func):
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            raise SilentError() from e
+
+    return wrapped

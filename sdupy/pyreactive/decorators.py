@@ -3,12 +3,14 @@ import inspect
 import contextlib
 import functools
 import logging
+import traceback
 from contextlib import suppress
 from functools import wraps
 from typing import Callable, Iterable, Union, overload
 
 import asyncio_extras
 
+from sdupy.pyreactive import settings
 from sdupy.pyreactive.common import CoroutineFunction, is_wrapper
 
 
@@ -21,13 +23,15 @@ def hide_nested_calls(f: Callable):
     """
     When reporting an exception, hide nested calls from here up to stop_hiding_nested_calls()
     """
+    if not settings.HIDE_IRREVELANT_STACK_FRAMES:
+        return f
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except HideStackHelper as e:
             # the string below is to make it easier to analyze stack traces
-            "----- IGNORE THIS FRAME -----"; raise e.exception_to_rethrow() from None
+            raise e.exception_to_rethrow() from None  # ----- IGNORE THIS FRAME -----
 
     return wrapper
 
@@ -36,6 +40,9 @@ def stop_hiding_nested_calls(f: Callable):
     """
     When reporting an exception, hide nested calls from here up to stop_hiding_nested_calls()
     """
+    if not settings.HIDE_IRREVELANT_STACK_FRAMES:
+        return f
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
@@ -71,7 +78,9 @@ class Reactive:
             def factory(decorated, args, kwargs):
                 # import here to avoid circular dependency (SyncReactiveProxy does Reactive.__call__ for it's members)
                 from .var import SyncReactiveProxy
-                res = SyncReactiveProxy(decorated, args, kwargs)
+                NUM_INTERNAL_FRAMES = 3 if settings.HIDE_IRREVELANT_STACK_FRAMES else 2  # number of frames on stack that are not relevant for user
+                trace = traceback.extract_stack()[:-NUM_INTERNAL_FRAMES]
+                res = SyncReactiveProxy(decorated, args, kwargs, trace)
                 if args_need_reaction(res.args, res.kwargs):
                     #return res._update(res)
                     return res
@@ -172,8 +181,11 @@ class ReactiveCm(Reactive):
         elif hasattr(func, '__call__'):
             def factory(decorated, args, kwargs):
                 from .var import CmReactiveProxy
-                res = CmReactiveProxy(decorated, args, kwargs)
-                return res._update(res)
+                NUM_INTERNAL_FRAMES = 2  # number of frames on stack that are not relevant for user
+                trace = traceback.extract_stack()[:-NUM_INTERNAL_FRAMES]
+                res = CmReactiveProxy(decorated, args, kwargs, trace)
+                # return res._update(res)
+                return res
         else:
             raise Exception("{} is neither a function nor a coroutine function (async def...)".format(repr(func)))
         return DecoratedFunction(self, factory, func)
